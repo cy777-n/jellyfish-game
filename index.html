@@ -119,13 +119,13 @@ let score = 0, isGameOver = false, isTouching = false;
 let highscore = parseInt(localStorage.getItem("jellyHighscore")) || 0;
 
 const jellyConfigs = [
-    { r: 15, color: '#FF99CC', eyeSize: 2.5 },
-    { r: 24, color: '#99FF99', eyeSize: 3.5 },
-    { r: 35, color: '#4FC3F7', eyeSize: 5 },
-    { r: 48, color: '#FFF176', eyeSize: 7 },
-    { r: 62, color: '#BA68C8', eyeSize: 8.5 },
-    { r: 78, color: '#FFB74D', eyeSize: 10 },
-    { r: 92, color: '#FF5252', eyeSize: 12 }
+    { r: 20, color: '#FF99CC', eyeSize: 2 },
+    { r: 25, color: '#99FF99', eyeSize: 2.5 },
+    { r: 35, color: '#4FC3F7', eyeSize: 3.5 },
+    { r: 50, color: '#FFF176', eyeSize: 5 },
+    { r: 65, color: '#BA68C8', eyeSize: 6.5 },
+    { r: 75, color: '#FFB74D', eyeSize: 7.5 },
+    { r: 90, color: '#FF5252', eyeSize: 9 }
 ];
 
 const DEADLINE_Y = 60;
@@ -170,7 +170,7 @@ function createGuide() {
     jellyConfigs.forEach((config, index) => {
         const circle = document.createElement('div');
         circle.className = 'guide-circle';
-        const size = 10 + index * 2.5; 
+        const size = 8 + index * 3; 
         circle.style.width = size + 'px';
         circle.style.height = size + 'px';
         circle.style.background = config.color;
@@ -198,7 +198,7 @@ function spawnNew() {
     if (isGameOver) return;
     const level = Math.floor(Math.random() * 3);
     const cw = render.canvas.width;
-    currentJelly = Bodies.circle(cw/2, 30, jellyConfigs[level].r, {
+    currentJelly = Bodies.circle(cw/2, 35, jellyConfigs[level].r, {
         isStatic: true,
         label: 'jelly_' + level,
         restitution: 0.45,
@@ -219,7 +219,7 @@ function setupEvents() {
         const cw = canvas.width;
         Body.setPosition(currentJelly, { 
             x: Math.max(r, Math.min(cw - r, x)), 
-            y: 30 
+            y: 35 
         });
     };
 
