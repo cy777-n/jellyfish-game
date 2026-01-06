@@ -27,12 +27,14 @@
         }
         .score-box {
             color: #fff;
-            font-size: 20px;
+            font-size: 18px;
             background: rgba(255, 255, 255, 0.2);
-            padding: 8px 15px;
+            padding: 8px 12px;
             border-radius: 15px;
             backdrop-filter: blur(5px);
             border: 2px solid rgba(255,255,255,0.3);
+            min-width: 80px;
+            text-align: center;
         }
         #game-container {
             position: relative;
@@ -56,6 +58,7 @@
             display: none;
             z-index: 100;
             box-shadow: 0 0 50px rgba(0,0,0,0.5);
+            width: 200px;
         }
         button {
             background: #ff4081;
@@ -78,8 +81,8 @@
 
 <div id="game-container">
     <div id="game-over">
-        <h2 style="color: #ff4081; margin: 0;">哎呀！滿出來了</h2>
-        <p style="color: #333;">得分: <span id="final-score">0</span></p>
+        <h2 style="color: #ff4081; margin: 0;">遊戲結束</h2>
+        <p style="color: #333;">本次得分: <span id="final-score">0</span></p>
         <button onclick="location.reload()">再玩一次</button>
     </div>
 </div>
@@ -87,15 +90,17 @@
 <script>
 const { Engine, Render, Runner, Bodies, Composite, Events, Body } = Matter;
 
-// 音效 (保留架構，可自行替換連結)
 const mergeSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2020/2020-preview.mp3');
 const dropSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2004/2004-preview.mp3');
 
 let engine, render, runner, currentJelly = null;
 let score = 0;
+let highscore = parseInt(localStorage.getItem("jellyHighscore")) || 0;
 let isGameOver = false;
 
-// 擴大大小差異：20 -> 110
+// 初始顯示歷史最高分
+document.getElementById('highscore').innerText = highscore;
+
 const jellyConfigs = [
     { r: 20, color: '#FF99CC', eyeSize: 3, label: '草莓水母' },
     { r: 32, color: '#99FF99', eyeSize: 4, label: '哈密瓜水母' },
@@ -114,7 +119,7 @@ function init() {
         options: {
             width: 360,
             height: 600,
-            wireframes: false, // 關閉線框，使用自定義繪圖
+            wireframes: false,
             background: 'transparent'
         }
     });
@@ -133,13 +138,26 @@ function init() {
     drawLoop();
 }
 
+function updateScore(points) {
+    score += points;
+    document.getElementById('score').innerText = score;
+    
+    // 檢查是否超過最高分
+    if (score > highscore) {
+        highscore = score;
+        document.getElementById('highscore').innerText = highscore;
+        // 即時儲存到瀏覽器記憶體
+        localStorage.setItem("jellyHighscore", highscore);
+    }
+}
+
 function spawnNew() {
     if (isGameOver) return;
-    const level = Math.floor(Math.random() * 3); // 隨機出現前三級
+    const level = Math.floor(Math.random() * 3);
     currentJelly = Bodies.circle(180, 50, jellyConfigs[level].r, {
         isStatic: true,
         label: 'jelly_' + level,
-        restitution: 0.5, // 增加彈性
+        restitution: 0.5,
         friction: 0.05
     });
     currentJelly.level = level;
@@ -173,7 +191,6 @@ function setupEvents() {
     canvas.addEventListener('mousedown', drop);
     canvas.addEventListener('touchstart', (e) => { e.preventDefault(); drop(); });
 
-    // 合成偵測
     Events.on(engine, 'collisionStart', (event) => {
         event.pairs.forEach(pair => {
             const { bodyA, bodyB } = pair;
@@ -182,19 +199,23 @@ function setupEvents() {
                 if (lvl < 6) {
                     const midX = (bodyA.position.x + bodyB.position.x) / 2;
                     const midY = (bodyA.position.y + bodyB.position.y) / 2;
-                    Composite.remove(engine.world, [bodyA, bodyB]);
                     
-                    mergeSound.play().catch(()=>{});
-                    
-                    const nextLevel = lvl + 1;
-                    const newJelly = Bodies.circle(midX, midY, jellyConfigs[nextLevel].r, {
-                        label: 'jelly_' + nextLevel,
-                        restitution: 0.6
-                    });
-                    newJelly.level = nextLevel;
-                    Composite.add(engine.world, newJelly);
-                    score += (lvl + 1) * 10;
-                    document.getElementById('score').innerText = score;
+                    // 檢查這對水母是否還在世界中，避免重複觸發
+                    if (Composite.get(engine.world, bodyA.id, 'body') && Composite.get(engine.world, bodyB.id, 'body')) {
+                        Composite.remove(engine.world, [bodyA, bodyB]);
+                        mergeSound.play().catch(()=>{});
+                        
+                        const nextLevel = lvl + 1;
+                        const newJelly = Bodies.circle(midX, midY, jellyConfigs[nextLevel].r, {
+                            label: 'jelly_' + nextLevel,
+                            restitution: 0.6
+                        });
+                        newJelly.level = nextLevel;
+                        Composite.add(engine.world, newJelly);
+                        
+                        // 使用新的計分函數並儲存最高分
+                        updateScore((lvl + 1) * 10);
+                    }
                 }
             }
         });
@@ -203,7 +224,7 @@ function setupEvents() {
     Events.on(engine, 'afterUpdate', () => {
         Composite.allBodies(engine.world).forEach(body => {
             if (!body.isStatic && body.position.y < 100 && body !== currentJelly) {
-                if (body.velocity.y < 0.1) {
+                if (body.velocity.y < 0.1 && body.velocity.x < 0.1) {
                     isGameOver = true;
                     document.getElementById('game-over').style.display = 'block';
                     document.getElementById('final-score').innerText = score;
@@ -213,7 +234,6 @@ function setupEvents() {
     });
 }
 
-// --- 可愛風繪製邏輯 ---
 function drawLoop() {
     Events.on(render, 'afterRender', () => {
         const ctx = render.context;
@@ -230,7 +250,7 @@ function drawLoop() {
             ctx.translate(x, y);
             ctx.rotate(body.angle);
 
-            // 1. 傘蓋 (身體)
+            // 身體
             ctx.beginPath();
             ctx.arc(0, 0, r, 0, Math.PI * 2);
             ctx.fillStyle = config.color;
@@ -240,7 +260,7 @@ function drawLoop() {
             ctx.lineWidth = 3;
             ctx.stroke();
 
-            // 2. 腮紅
+            // 腮紅
             ctx.beginPath();
             ctx.fillStyle = '#ffb3ba';
             ctx.globalAlpha = 0.4;
@@ -248,7 +268,7 @@ function drawLoop() {
             ctx.arc(r*0.4, 0, r*0.15, 0, Math.PI*2);
             ctx.fill();
 
-            // 3. 眼睛 (會隨機眨眼的可愛黑豆眼)
+            // 眼睛
             ctx.globalAlpha = 1;
             ctx.fillStyle = '#333';
             const eyeOffset = r * 0.25;
@@ -257,14 +277,14 @@ function drawLoop() {
             ctx.arc(eyeOffset, -r*0.1, config.eyeSize, 0, Math.PI*2);
             ctx.fill();
             
-            // 4. 小嘴巴
+            // 嘴巴
             ctx.beginPath();
             ctx.arc(0, r*0.1, r*0.1, 0, Math.PI);
             ctx.strokeStyle = '#333';
             ctx.lineWidth = 2;
             ctx.stroke();
 
-            // 5. 底部波浪 (小觸手)
+            // 觸手
             ctx.beginPath();
             ctx.fillStyle = config.color;
             for(let i=0; i<5; i++){
@@ -286,7 +306,6 @@ function drawLoop() {
     });
 }
 
-document.getElementById('highscore').innerText = localStorage.getItem('jellyHighscore') || 0;
 init();
 </script>
 </body>
