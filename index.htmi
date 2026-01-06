@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>水母合成遊戲</title>
+<style>
+body {
+  margin: 0;
+  background: radial-gradient(circle at top, #003366, #00111f);
+  font-family: 'Segoe UI', sans-serif;
+  user-select: none;
+  touch-action: none;
+  overflow: hidden;
+}
+
+#score, #highscore {
+  position: absolute;
+  top: 10px;
+  font-size: 22px;
+  font-weight: bold;
+  color: #fff;
+  text-shadow: 0 0 8px #00cfff;
+}
+
+#score { left: 10px; }
+#highscore { right: 10px; }
+
+#tank {
+  width: 320px;
+  height: 550px;
+  margin: 80px auto;
+  border: 5px solid #00cfff;
+  border-radius: 20px;
+  background: rgba(0,50,100,0.2);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 0 30px rgba(0,255,255,0.3) inset;
+}
+
+.jellyfish {
+  position: absolute;
+  border-radius: 50% 50% 40% 40%;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  box-shadow: 0 0 15px rgba(255,255,255,0.6);
+  animation: float 2s ease-in-out infinite;
+}
+
+.tentacles {
+  position: absolute;
+  bottom: -25px;
+  width: 60%;
+  height: 30px;
+  background:
+    repeating-linear-gradient(
+      to right,
+      rgba(255,255,255,0.6),
+      rgba(255,255,255,0.6) 4px,
+      transparent 4px,
+      transparent 8px
+    );
+  border-radius: 0 0 20px 20px;
+}
+
+.level1 { background: rgba(180,220,255,0.9); width: 40px; height: 30px; }
+.level2 { background: rgba(140,200,255,0.9); width: 50px; height: 40px; }
+.level3 { background: rgba(200,140,255,0.9); width: 60px; height: 50px; }
+.level4 { background: rgba(255,140,200,0.9); width: 70px; height: 60px; }
+.level5 { background: rgba(255,220,140,0.9); width: 80px; height: 70px; }
+.level6 { background: rgba(255,180,100,0.9); width: 90px; height: 80px; }
+.level7 { background: rgba(255,230,100,0.95); width: 100px; height: 90px; }
+
+@keyframes float {
+  0% { transform: translateY(0); }
+  50% { transform: translateY(4px); }
+  100% { transform: translateY(0); }
+}
+
+#game-over {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 36px;
+  color: #fff;
+  background: rgba(0,0,0,0.7);
+  padding: 25px 50px;
+  border-radius: 20px;
+  display: none;
+  text-align: center;
+  box-shadow: 0 0 20px #00ffff;
+}
+</style>
+</head>
+<body>
+<div id="score">分數: 0</div>
+<div id="highscore">歷史最高: 0</div>
+<div id="tank"></div>
+<div id="game-over">Game Over<br>點擊重新開始</div>
+
+<script>
+const tank = document.getElementById("tank");
+const scoreEl = document.getElementById("score");
+const highscoreEl = document.getElementById("highscore");
+const gameOverEl = document.getElementById("game-over");
+
+const GRAVITY = 4;
+const MAX_LEVEL = 7;
+let score = 0;
+let highscore = localStorage.getItem("jellyHighscore") || 0;
+let jellies = [];
+let current = null;
+let isFalling = false;
+
+const levelScore = [0,10,20,30,40,50,60,70];
+highscoreEl.innerText = `歷史最高: ${highscore}`;
+
+function createJelly(level=1, x=120) {
+  const j = document.createElement("div");
+  j.className = `jellyfish level${level}`;
+  j.dataset.level = level;
+  j.innerHTML = `<div class="tentacles"></div>`;
+  tank.appendChild(j);
+  j.x = x;
+  j.y = 20;
+  j.style.left = j.x + "px";
+  j.style.top = j.y + "px";
+  jellies.push(j);
+  return j;
+}
+
+function spawnNew() {
+  current = createJelly(1, tank.clientWidth/2 - 20);
+  isFalling = false;
+}
+
+tank.addEventListener("touchmove", e => {
+  if (!current || isFalling) return;
+  const touchX = e.touches[0].clientX - tank.getBoundingClientRect().left;
+  current.x = Math.min(Math.max(0, touchX - current.offsetWidth/2), tank.clientWidth - current.offsetWidth);
+  current.style.left = current.x + "px";
+});
+
+tank.addEventListener("touchend", () => {
+  if (!current || isFalling) return;
+  isFalling = true;
+  fall();
+});
+
+function fall() {
+  if (!isFalling) return;
+  current.y += GRAVITY;
+  current.style.top = current.y + "px";
+
+  // 放寬碰撞判斷範圍
+  let hit = jellies.find(j =>
+      j !== current &&
+      Math.abs((j.y + j.offsetHeight) - current.y) < 20 &&
+      Math.abs((j.x + j.offsetWidth/2) - (current.x + current.offsetWidth/2)) < (current.offsetWidth/2)
+  );
+
+  if (hit && parseInt(hit.dataset.level) === parseInt(current.dataset.level)) {
+    merge(hit, current);
+    return;
+  }
+
+  if (current.y + current.offsetHeight >= tank.clientHeight) {
+    current.y = tank.clientHeight - current.offsetHeight;
+    current.style.top = current.y + "px";
+    checkGameOver();
+    spawnNew();
+    return;
+  }
+
+  requestAnimationFrame(fall);
+}
+
+function merge(a,b) {
+  const newLevel = Math.min(MAX_LEVEL, parseInt(a.dataset.level) + 1);
+  const x = a.x;
+  const y = a.y;
+  a.remove();
+  b.remove();
+  jellies = jellies.filter(j => j !== a && j !== b);
+
+  const merged = createJelly(newLevel, x);
+  merged.y = y;
+  merged.style.top = y + "px";
+
+  score += levelScore[newLevel];
+  scoreEl.innerText = `分數: ${score}`;
+
+  if(score > highscore){
+    highscore = score;
+    localStorage.setItem("jellyHighscore", highscore);
+    highscoreEl.innerText = `歷史最高: ${highscore}`;
+  }
+
+  spawnNew();
+}
+
+function checkGameOver() {
+  for (let j of jellies) {
+    if (j.y <= 0) {
+      gameOverEl.style.display = "block";
+      current = null;
+      isFalling = false;
+      return;
+    }
+  }
+}
+
+gameOverEl.addEventListener("click", ()=>{
+  jellies.forEach(j=>j.remove());
+  jellies=[];
+  score=0;
+  scoreEl.innerText = `分數: ${score}`;
+  gameOverEl.style.display = "none";
+  spawnNew();
+});
+
+spawnNew();
+</script>
+</body>
+</html>
