@@ -13,7 +13,6 @@ body {
   touch-action: none;
   overflow: hidden;
 }
-
 #score, #highscore {
   position: absolute;
   top: 10px;
@@ -22,10 +21,8 @@ body {
   color: #fff;
   text-shadow: 0 0 8px #00cfff;
 }
-
 #score { left: 10px; }
 #highscore { right: 10px; }
-
 #tank {
   width: 320px;
   height: 550px;
@@ -37,7 +34,6 @@ body {
   overflow: hidden;
   box-shadow: 0 0 30px rgba(0,255,255,0.3) inset;
 }
-
 .jellyfish {
   position: absolute;
   border-radius: 50% 50% 40% 40%;
@@ -47,7 +43,6 @@ body {
   box-shadow: 0 0 15px rgba(255,255,255,0.6);
   animation: float 2s ease-in-out infinite;
 }
-
 .tentacles {
   position: absolute;
   bottom: -25px;
@@ -63,7 +58,6 @@ body {
     );
   border-radius: 0 0 20px 20px;
 }
-
 .level1 { background: rgba(180,220,255,0.9); width: 40px; height: 30px; }
 .level2 { background: rgba(140,200,255,0.9); width: 50px; height: 40px; }
 .level3 { background: rgba(200,140,255,0.9); width: 60px; height: 50px; }
@@ -71,13 +65,11 @@ body {
 .level5 { background: rgba(255,220,140,0.9); width: 80px; height: 70px; }
 .level6 { background: rgba(255,180,100,0.9); width: 90px; height: 80px; }
 .level7 { background: rgba(255,230,100,0.95); width: 100px; height: 90px; }
-
 @keyframes float {
   0% { transform: translateY(0); }
   50% { transform: translateY(4px); }
   100% { transform: translateY(0); }
 }
-
 #game-over {
   position: absolute;
   top: 50%;
@@ -99,7 +91,6 @@ body {
 <div id="highscore">歷史最高: 0</div>
 <div id="tank"></div>
 <div id="game-over">Game Over<br>點擊重新開始</div>
-
 <script>
 const tank = document.getElementById("tank");
 const scoreEl = document.getElementById("score");
@@ -115,7 +106,6 @@ let current = null;
 let isFalling = false;
 
 const levelScore = [0,10,20,30,40,50,60,70];
-
 highscoreEl.innerText = `歷史最高: ${highscore}`;
 
 function createJelly(level=1, x=120) {
@@ -150,51 +140,84 @@ tank.addEventListener("touchend", () => {
   fall();
 });
 
+function isCollide(a, b){
+    return !(
+        a.x + a.offsetWidth < b.x ||
+        a.x > b.x + b.offsetWidth ||
+        a.y + a.offsetHeight < b.y ||
+        a.y > b.y + b.offsetHeight
+    );
+}
+
 function fall() {
   if (!isFalling) return;
   current.y += GRAVITY;
   current.style.top = current.y + "px";
 
-  let hit = jellies.find(j =>
-    j !== current &&
-    Math.abs(j.y + j.offsetHeight - current.y) < 10 &&
-    Math.abs(j.x - current.x) < 50
-  );
+  let landed = false;
 
-  if (hit && parseInt(hit.dataset.level) === parseInt(current.dataset.level)) {
-    merge(hit, current);
-    return;
+  // 碰撞檢查
+  for(let j of jellies){
+    if(j === current) continue;
+    if(isCollide(current, j) && parseInt(j.dataset.level) === parseInt(current.dataset.level)){
+        merge(j, current);
+        return;
+    } else if(current.y + current.offsetHeight >= j.y){
+        landed = true;
+    }
   }
 
-  if (current.y + current.offsetHeight >= tank.clientHeight) {
-    current.y = tank.clientHeight - current.offsetHeight;
-    current.style.top = current.y + "px";
-    checkGameOver();
-    spawnNew();
-    return;
+  if(current.y + current.offsetHeight >= tank.clientHeight){
+      landed = true;
+      current.y = tank.clientHeight - current.offsetHeight;
+      current.style.top = current.y + "px";
+  }
+
+  if(landed){
+      checkMerge(current);
+      spawnNew();
+      return;
   }
 
   requestAnimationFrame(fall);
 }
 
-function merge(a,b) {
-  const newLevel = Math.min(MAX_LEVEL, parseInt(a.dataset.level)+1);
+function checkMerge(jelly){
+    let merged = true;
+    while(merged){
+        merged = false;
+        for(let j of jellies){
+            if(j === jelly) continue;
+            if(isCollide(jelly, j) && parseInt(j.dataset.level) === parseInt(jelly.dataset.level)){
+                merge(j, jelly);
+                jelly = jellies[jellies.length-1]; // 更新成新水母
+                merged = true;
+                break;
+            }
+        }
+    }
+}
+
+function merge(a,b){
+  const newLevel = Math.min(MAX_LEVEL, parseInt(a.dataset.level) + 1);
   const x = a.x;
   const y = a.y;
   a.remove();
   b.remove();
-  jellies = jellies.filter(j=>j!==a && j!==b);
+  jellies = jellies.filter(j => j !== a && j !== b);
+
   const merged = createJelly(newLevel, x);
   merged.y = y;
   merged.style.top = y + "px";
+
   score += levelScore[newLevel];
   scoreEl.innerText = `分數: ${score}`;
+
   if(score > highscore){
     highscore = score;
     localStorage.setItem("jellyHighscore", highscore);
     highscoreEl.innerText = `歷史最高: ${highscore}`;
   }
-  spawnNew();
 }
 
 function checkGameOver() {
