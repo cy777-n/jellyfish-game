@@ -3,22 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>繽紛可愛水母合成</title>
+    <title>水母合成遊戲</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
     <style>
         body {
             margin: 0;
-            background: #001220;
+            background: #000b14;
             font-family: 'Arial Rounded MT Bold', 'Helvetica', sans-serif;
             overflow: hidden;
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
+            touch-action: none; /* 防止手機瀏覽器預設行為 */
         }
         #ui {
             position: absolute;
-            top: 15px;
+            top: 20px;
             width: 360px;
             display: flex;
             justify-content: space-between;
@@ -28,90 +29,98 @@
         .score-box {
             color: #fff;
             font-size: 18px;
-            background: rgba(255, 255, 255, 0.2);
-            padding: 8px 12px;
-            border-radius: 15px;
-            backdrop-filter: blur(5px);
-            border: 2px solid rgba(255,255,255,0.3);
-            min-width: 80px;
+            background: rgba(255, 255, 255, 0.15);
+            padding: 10px 15px;
+            border-radius: 20px;
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255,255,255,0.3);
             text-align: center;
+            min-width: 90px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
         }
         #game-container {
             position: relative;
             width: 360px;
             height: 600px;
-            border: 6px solid #4fc3f7;
-            border-radius: 0 0 30px 30px;
-            background: linear-gradient(to bottom, #002f4d, #001220);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            border: 5px solid #4fc3f7;
+            border-top: none;
+            border-radius: 0 0 35px 35px;
+            background: linear-gradient(to bottom, #00233d, #000b14);
+            box-shadow: 0 15px 50px rgba(0,0,0,0.6);
         }
-        canvas { display: block; }
+        canvas { display: block; border-radius: 0 0 30px 30px; }
         #game-over {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
             background: rgba(255, 255, 255, 0.95);
-            padding: 30px;
-            border-radius: 25px;
+            padding: 35px;
+            border-radius: 30px;
             text-align: center;
             display: none;
             z-index: 100;
-            box-shadow: 0 0 50px rgba(0,0,0,0.5);
-            width: 200px;
+            box-shadow: 0 0 60px rgba(0,0,0,0.5);
+            width: 220px;
         }
         button {
             background: #ff4081;
             border: none;
             color: white;
-            padding: 12px 25px;
+            padding: 14px 30px;
             border-radius: 50px;
             font-size: 18px;
+            font-weight: bold;
             cursor: pointer;
-            margin-top: 15px;
+            margin-top: 20px;
+            transition: transform 0.2s;
         }
+        button:active { transform: scale(0.9); }
     </style>
 </head>
 <body>
 
 <div id="ui">
-    <div class="score-box">分數: <span id="score">0</span></div>
-    <div class="score-box">最高: <span id="highscore">0</span></div>
+    <div class="score-box">分數<br><span id="score">0</span></div>
+    <div class="score-box">最高<br><span id="highscore">0</span></div>
 </div>
 
 <div id="game-container">
     <div id="game-over">
-        <h2 style="color: #ff4081; margin: 0;">遊戲結束</h2>
-        <p style="color: #333;">本次得分: <span id="final-score">0</span></p>
-        <button onclick="location.reload()">再玩一次</button>
+        <h2 style="color: #ff4081; margin: 0;">滿出來了！</h2>
+        <p style="color: #333; font-size: 18px;">得分: <span id="final-score">0</span></p>
+        <button onclick="location.reload()">重新挑戰</button>
     </div>
 </div>
 
 <script>
+// 初始化 Matter.js 引擎部件
 const { Engine, Render, Runner, Bodies, Composite, Events, Body } = Matter;
 
+// 音效資源
 const mergeSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2020/2020-preview.mp3');
 const dropSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2004/2004-preview.mp3');
 
 let engine, render, runner, currentJelly = null;
 let score = 0;
-let highscore = parseInt(localStorage.getItem("jellyHighscore")) || 0;
 let isGameOver = false;
+let isTouching = false;
+let highscore = parseInt(localStorage.getItem("jellyHighscore")) || 0;
 
-// 初始顯示歷史最高分
-document.getElementById('highscore').innerText = highscore;
-
+// 水母設定：顯著的半徑級距 (20 -> 115)
 const jellyConfigs = [
     { r: 20, color: '#FF99CC', eyeSize: 3, label: '草莓水母' },
-    { r: 32, color: '#99FF99', eyeSize: 4, label: '哈密瓜水母' },
-    { r: 45, color: '#99CCFF', eyeSize: 5, label: '蘇打水母' },
-    { r: 60, color: '#FFFF99', eyeSize: 6, label: '蜂蜜水母' },
-    { r: 75, color: '#CC99FF', eyeSize: 8, label: '葡萄水母' },
-    { r: 92, color: '#FFCC99', eyeSize: 10, label: '蜜柑水母' },
-    { r: 110, color: '#FF6666', eyeSize: 12, label: '大王水母' }
+    { r: 33, color: '#99FF99', eyeSize: 4.5, label: '哈密瓜水母' },
+    { r: 48, color: '#4FC3F7', eyeSize: 6, label: '蘇打水母' },
+    { r: 65, color: '#FFF176', eyeSize: 8, label: '蜂蜜水母' },
+    { r: 80, color: '#BA68C8', eyeSize: 10, label: '葡萄水母' },
+    { r: 98, color: '#FFB74D', eyeSize: 12, label: '蜜柑水母' },
+    { r: 115, color: '#FF5252', eyeSize: 14, label: '大王水母' }
 ];
 
 function init() {
+    document.getElementById('highscore').innerText = highscore;
+    
     engine = Engine.create();
     render = Render.create({
         element: document.getElementById('game-container'),
@@ -124,6 +133,7 @@ function init() {
         }
     });
 
+    // 建立容器牆壁
     const ground = Bodies.rectangle(180, 610, 400, 20, { isStatic: true });
     const leftWall = Bodies.rectangle(-10, 300, 20, 600, { isStatic: true });
     const rightWall = Bodies.rectangle(370, 300, 20, 600, { isStatic: true });
@@ -138,27 +148,24 @@ function init() {
     drawLoop();
 }
 
-function updateScore(points) {
-    score += points;
+function updateScore(pts) {
+    score += pts;
     document.getElementById('score').innerText = score;
-    
-    // 檢查是否超過最高分
     if (score > highscore) {
         highscore = score;
         document.getElementById('highscore').innerText = highscore;
-        // 即時儲存到瀏覽器記憶體
         localStorage.setItem("jellyHighscore", highscore);
     }
 }
 
 function spawnNew() {
     if (isGameOver) return;
-    const level = Math.floor(Math.random() * 3);
-    currentJelly = Bodies.circle(180, 50, jellyConfigs[level].r, {
+    const level = Math.floor(Math.random() * 3); // 隨機生成前三個等級
+    currentJelly = Bodies.circle(180, 55, jellyConfigs[level].r, {
         isStatic: true,
         label: 'jelly_' + level,
         restitution: 0.5,
-        friction: 0.05
+        friction: 0.1
     });
     currentJelly.level = level;
     Composite.add(engine.world, currentJelly);
@@ -166,41 +173,60 @@ function spawnNew() {
 
 function setupEvents() {
     const canvas = render.canvas;
-    const updatePos = (e) => {
+
+    const updatePos = (clientX) => {
         if (!currentJelly || isGameOver) return;
         const rect = canvas.getBoundingClientRect();
-        const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+        const x = clientX - rect.left;
         const r = jellyConfigs[currentJelly.level].r;
         Body.setPosition(currentJelly, { 
             x: Math.max(r, Math.min(360 - r, x)), 
-            y: 50 
+            y: 55 
         });
     };
 
-    canvas.addEventListener('mousemove', updatePos);
-    canvas.addEventListener('touchmove', updatePos);
-    
-    const drop = () => {
-        if (!currentJelly || isGameOver) return;
-        Body.setStatic(currentJelly, false);
-        dropSound.play().catch(()=>{});
-        currentJelly = null;
-        setTimeout(spawnNew, 1000);
+    const handleStart = (e) => {
+        if (isGameOver) return;
+        isTouching = true;
+        const x = e.touches ? e.touches[0].clientX : e.clientX;
+        updatePos(x);
     };
 
-    canvas.addEventListener('mousedown', drop);
-    canvas.addEventListener('touchstart', (e) => { e.preventDefault(); drop(); });
+    const handleMove = (e) => {
+        if (isTouching) {
+            const x = e.touches ? e.touches[0].clientX : e.clientX;
+            updatePos(x);
+        }
+    };
 
+    const handleEnd = () => {
+        if (!currentJelly || isGameOver || !isTouching) return;
+        isTouching = false;
+        Body.setStatic(currentJelly, false); // 掉落
+        dropSound.play().catch(()=>{});
+        currentJelly = null;
+        setTimeout(spawnNew, 900);
+    };
+
+    // 事件監聽 (滑鼠 + 觸控)
+    canvas.addEventListener('mousedown', handleStart);
+    window.addEventListener('mousemove', handleMove);
+    window.addEventListener('mouseup', handleEnd);
+
+    canvas.addEventListener('touchstart', (e) => { e.preventDefault(); handleStart(e); }, {passive: false});
+    canvas.addEventListener('touchmove', (e) => { e.preventDefault(); handleMove(e); }, {passive: false});
+    canvas.addEventListener('touchend', (e) => { e.preventDefault(); handleEnd(); }, {passive: false});
+
+    // 合成邏輯
     Events.on(engine, 'collisionStart', (event) => {
         event.pairs.forEach(pair => {
             const { bodyA, bodyB } = pair;
-            if (bodyA.label.startsWith('jelly_') && bodyA.label === bodyB.label) {
+            if (bodyA.label && bodyA.label === bodyB.label && bodyA.label.startsWith('jelly_')) {
                 const lvl = bodyA.level;
                 if (lvl < 6) {
                     const midX = (bodyA.position.x + bodyB.position.x) / 2;
                     const midY = (bodyA.position.y + bodyB.position.y) / 2;
                     
-                    // 檢查這對水母是否還在世界中，避免重複觸發
                     if (Composite.get(engine.world, bodyA.id, 'body') && Composite.get(engine.world, bodyB.id, 'body')) {
                         Composite.remove(engine.world, [bodyA, bodyB]);
                         mergeSound.play().catch(()=>{});
@@ -208,23 +234,22 @@ function setupEvents() {
                         const nextLevel = lvl + 1;
                         const newJelly = Bodies.circle(midX, midY, jellyConfigs[nextLevel].r, {
                             label: 'jelly_' + nextLevel,
-                            restitution: 0.6
+                            restitution: 0.5
                         });
                         newJelly.level = nextLevel;
                         Composite.add(engine.world, newJelly);
-                        
-                        // 使用新的計分函數並儲存最高分
-                        updateScore((lvl + 1) * 10);
+                        updateScore((lvl + 1) * 12);
                     }
                 }
             }
         });
     });
 
+    // 死亡判定
     Events.on(engine, 'afterUpdate', () => {
         Composite.allBodies(engine.world).forEach(body => {
-            if (!body.isStatic && body.position.y < 100 && body !== currentJelly) {
-                if (body.velocity.y < 0.1 && body.velocity.x < 0.1) {
+            if (!body.isStatic && body.position.y < 110 && body !== currentJelly) {
+                if (Math.abs(body.velocity.y) < 0.1) {
                     isGameOver = true;
                     document.getElementById('game-over').style.display = 'block';
                     document.getElementById('final-score').innerText = score;
@@ -250,57 +275,59 @@ function drawLoop() {
             ctx.translate(x, y);
             ctx.rotate(body.angle);
 
-            // 身體
+            // 1. 傘蓋本體
             ctx.beginPath();
             ctx.arc(0, 0, r, 0, Math.PI * 2);
             ctx.fillStyle = config.color;
             ctx.globalAlpha = 0.85;
             ctx.fill();
-            ctx.strokeStyle = '#fff';
+            ctx.strokeStyle = '#ffffff';
             ctx.lineWidth = 3;
             ctx.stroke();
 
-            // 腮紅
+            // 2. 腮紅
             ctx.beginPath();
-            ctx.fillStyle = '#ffb3ba';
-            ctx.globalAlpha = 0.4;
-            ctx.arc(-r*0.4, 0, r*0.15, 0, Math.PI*2);
-            ctx.arc(r*0.4, 0, r*0.15, 0, Math.PI*2);
+            ctx.fillStyle = '#FF80AB';
+            ctx.globalAlpha = 0.3;
+            ctx.arc(-r*0.4, 0, r*0.18, 0, Math.PI*2);
+            ctx.arc(r*0.4, 0, r*0.18, 0, Math.PI*2);
             ctx.fill();
 
-            // 眼睛
+            // 3. 眼睛
             ctx.globalAlpha = 1;
-            ctx.fillStyle = '#333';
-            const eyeOffset = r * 0.25;
+            ctx.fillStyle = '#212121';
+            const eyeX = r * 0.28;
             ctx.beginPath();
-            ctx.arc(-eyeOffset, -r*0.1, config.eyeSize, 0, Math.PI*2);
-            ctx.arc(eyeOffset, -r*0.1, config.eyeSize, 0, Math.PI*2);
+            ctx.arc(-eyeX, -r*0.1, config.eyeSize, 0, Math.PI*2);
+            ctx.arc(eyeX, -r*0.1, config.eyeSize, 0, Math.PI*2);
             ctx.fill();
             
-            // 嘴巴
+            // 4. 小嘴巴 (微笑)
             ctx.beginPath();
-            ctx.arc(0, r*0.1, r*0.1, 0, Math.PI);
-            ctx.strokeStyle = '#333';
-            ctx.lineWidth = 2;
+            ctx.arc(0, r*0.1, r*0.12, 0.2, Math.PI - 0.2);
+            ctx.strokeStyle = '#212121';
+            ctx.lineWidth = 2.5;
+            ctx.lineCap = 'round';
             ctx.stroke();
 
-            // 觸手
+            // 5. 底部可愛波浪
             ctx.beginPath();
             ctx.fillStyle = config.color;
             for(let i=0; i<5; i++){
-                const tx = -r + (i * r * 0.4) + r*0.2;
-                ctx.arc(tx, r*0.8, r*0.2, 0, Math.PI);
+                const step = (r * 2) / 5;
+                const tx = -r + (i * step) + step/2;
+                ctx.arc(tx, r*0.8, step/2, 0, Math.PI);
             }
             ctx.fill();
 
             ctx.restore();
         });
 
-        // 死亡警示線
+        // 死亡警示線 (淡淡的點點)
         ctx.beginPath();
-        ctx.moveTo(0, 100); ctx.lineTo(360, 100);
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
-        ctx.setLineDash([5, 5]);
+        ctx.setLineDash([8, 8]);
+        ctx.moveTo(0, 110); ctx.lineTo(360, 110);
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
         ctx.stroke();
         ctx.setLineDash([]);
     });
