@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>深海水母：幻彩合成</title>
+    <title>繽紛可愛水母合成</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
     <style>
         body {
             margin: 0;
-            background: #00050a;
-            font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+            background: #001220;
+            font-family: 'Arial Rounded MT Bold', 'Helvetica', sans-serif;
             overflow: hidden;
             display: flex;
             justify-content: center;
@@ -18,114 +18,108 @@
         }
         #ui {
             position: absolute;
-            top: 20px;
+            top: 15px;
             width: 360px;
             display: flex;
             justify-content: space-between;
             z-index: 10;
             pointer-events: none;
         }
-        .score-tag {
-            color: #00e5ff;
-            font-size: 18px;
-            font-weight: bold;
-            text-shadow: 0 0 10px rgba(0, 229, 255, 0.8);
-            background: rgba(0, 20, 40, 0.6);
-            padding: 5px 15px;
-            border-radius: 20px;
-            border: 1px solid #00e5ff;
+        .score-box {
+            color: #fff;
+            font-size: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 8px 15px;
+            border-radius: 15px;
+            backdrop-filter: blur(5px);
+            border: 2px solid rgba(255,255,255,0.3);
         }
-        #game-box {
+        #game-container {
             position: relative;
             width: 360px;
             height: 600px;
-            box-shadow: 0 0 50px rgba(0, 100, 255, 0.2);
-        }
-        canvas {
+            border: 6px solid #4fc3f7;
             border-radius: 0 0 30px 30px;
-            background: radial-gradient(circle at center, #001a33 0%, #00050a 100%);
+            background: linear-gradient(to bottom, #002f4d, #001220);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
+        canvas { display: block; }
         #game-over {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background: rgba(0, 10, 20, 0.9);
-            color: white;
-            padding: 40px;
-            border-radius: 30px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 25px;
             text-align: center;
             display: none;
             z-index: 100;
-            border: 2px solid #00e5ff;
-            box-shadow: 0 0 30px #00e5ff;
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
         }
-        #start-hint {
-            position: absolute;
-            bottom: 50px;
-            color: rgba(255,255,255,0.5);
-            width: 100%;
-            text-align: center;
-            pointer-events: none;
+        button {
+            background: #ff4081;
+            border: none;
+            color: white;
+            padding: 12px 25px;
+            border-radius: 50px;
+            font-size: 18px;
+            cursor: pointer;
+            margin-top: 15px;
         }
     </style>
 </head>
 <body>
 
 <div id="ui">
-    <div class="score-tag">分數: <span id="score">0</span></div>
-    <div class="score-tag">最高: <span id="highscore">0</span></div>
+    <div class="score-box">分數: <span id="score">0</span></div>
+    <div class="score-box">最高: <span id="highscore">0</span></div>
 </div>
 
-<div id="game-box">
+<div id="game-container">
     <div id="game-over">
-        <h1 style="margin:0; color:#00e5ff;">實驗終止</h1>
-        <p>最終得分: <span id="final-score">0</span></p>
-        <button onclick="location.reload()" style="background:#00e5ff; border:none; padding:10px 30px; border-radius:10px; cursor:pointer; font-weight:bold;">重新注入能量</button>
+        <h2 style="color: #ff4081; margin: 0;">哎呀！滿出來了</h2>
+        <p style="color: #333;">得分: <span id="final-score">0</span></p>
+        <button onclick="location.reload()">再玩一次</button>
     </div>
-    <div id="start-hint">點擊畫面開始遊戲並開啟音效</div>
 </div>
 
 <script>
-const { Engine, Render, Runner, Bodies, Composite, Events, Body, Vector } = Matter;
+const { Engine, Render, Runner, Bodies, Composite, Events, Body } = Matter;
 
-// --- 音效設定 ---
-// 使用外部開源音效，您可以之後更換為本地路徑
-const bgm = new Audio('https://assets.mixkit.co/music/preview/mixkit-underwater-mysterious-813.mp3');
-bgm.loop = true;
-const dropSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2004/2004-preview.mp3');
+// 音效 (保留架構，可自行替換連結)
 const mergeSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2020/2020-preview.mp3');
+const dropSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2004/2004-preview.mp3');
 
 let engine, render, runner, currentJelly = null;
 let score = 0;
 let isGameOver = false;
-let audioStarted = false;
 
-// --- 水母畫風定義 ---
+// 擴大大小差異：20 -> 110
 const jellyConfigs = [
-    { r: 18, color: '#00f2ff', glow: '#00ffff', tentacles: 4, label: '微光水母' },
-    { r: 28, color: '#709dff', glow: '#80aaff', tentacles: 5, label: '幽藍水母' },
-    { r: 38, color: '#c38dff', glow: '#d4aaff', tentacles: 6, label: '極光紫水母' },
-    { r: 48, color: '#ff8db2', glow: '#ffaac4', tentacles: 8, label: '緋紅水母' },
-    { r: 60, color: '#ffce8d', glow: '#ffe0aa', tentacles: 10, label: '琥珀水母' },
-    { r: 75, color: '#ffffff', glow: '#00ffcc', tentacles: 12, label: '星雲水母' },
-    { r: 95, color: '#00ffaa', glow: '#aaffff', tentacles: 15, label: '幻神水母' }
+    { r: 20, color: '#FF99CC', eyeSize: 3, label: '草莓水母' },
+    { r: 32, color: '#99FF99', eyeSize: 4, label: '哈密瓜水母' },
+    { r: 45, color: '#99CCFF', eyeSize: 5, label: '蘇打水母' },
+    { r: 60, color: '#FFFF99', eyeSize: 6, label: '蜂蜜水母' },
+    { r: 75, color: '#CC99FF', eyeSize: 8, label: '葡萄水母' },
+    { r: 92, color: '#FFCC99', eyeSize: 10, label: '蜜柑水母' },
+    { r: 110, color: '#FF6666', eyeSize: 12, label: '大王水母' }
 ];
 
 function init() {
     engine = Engine.create();
     render = Render.create({
-        element: document.getElementById('game-box'),
+        element: document.getElementById('game-container'),
         engine: engine,
         options: {
             width: 360,
             height: 600,
-            wireframes: false,
+            wireframes: false, // 關閉線框，使用自定義繪圖
             background: 'transparent'
         }
     });
 
-    const ground = Bodies.rectangle(180, 610, 360, 20, { isStatic: true });
+    const ground = Bodies.rectangle(180, 610, 400, 20, { isStatic: true });
     const leftWall = Bodies.rectangle(-10, 300, 20, 600, { isStatic: true });
     const rightWall = Bodies.rectangle(370, 300, 20, 600, { isStatic: true });
     Composite.add(engine.world, [ground, leftWall, rightWall]);
@@ -134,177 +128,165 @@ function init() {
     runner = Runner.create();
     Runner.run(runner, engine);
 
-    spawnJelly();
-    setupController();
-    setupCollision();
-    animateCustom();
+    spawnNew();
+    setupEvents();
+    drawLoop();
 }
 
-// 產生新水母
-function spawnJelly() {
+function spawnNew() {
     if (isGameOver) return;
-    const level = Math.floor(Math.random() * 3); // 隨機前三種
-    currentJelly = Bodies.circle(180, 60, jellyConfigs[level].r, {
+    const level = Math.floor(Math.random() * 3); // 隨機出現前三級
+    currentJelly = Bodies.circle(180, 50, jellyConfigs[level].r, {
         isStatic: true,
         label: 'jelly_' + level,
-        restitution: 0.4,
-        friction: 0.1
+        restitution: 0.5, // 增加彈性
+        friction: 0.05
     });
     currentJelly.level = level;
     Composite.add(engine.world, currentJelly);
 }
 
-function setupController() {
+function setupEvents() {
     const canvas = render.canvas;
-    
-    const moveHandler = (e) => {
+    const updatePos = (e) => {
         if (!currentJelly || isGameOver) return;
-        const x = (e.touches ? e.touches[0].clientX : e.clientX) - canvas.getBoundingClientRect().left;
+        const rect = canvas.getBoundingClientRect();
+        const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
         const r = jellyConfigs[currentJelly.level].r;
-        const clampedX = Math.max(r, Math.min(360 - r, x));
-        Body.setPosition(currentJelly, { x: clampedX, y: 60 });
+        Body.setPosition(currentJelly, { 
+            x: Math.max(r, Math.min(360 - r, x)), 
+            y: 50 
+        });
     };
 
-    const dropHandler = () => {
-        if (!audioStarted) {
-            bgm.play();
-            audioStarted = true;
-            document.getElementById('start-hint').style.display = 'none';
-        }
+    canvas.addEventListener('mousemove', updatePos);
+    canvas.addEventListener('touchmove', updatePos);
+    
+    const drop = () => {
         if (!currentJelly || isGameOver) return;
-        
         Body.setStatic(currentJelly, false);
-        dropSound.currentTime = 0;
-        dropSound.play();
-        
+        dropSound.play().catch(()=>{});
         currentJelly = null;
-        setTimeout(spawnJelly, 800);
+        setTimeout(spawnNew, 1000);
     };
 
-    canvas.addEventListener('mousemove', moveHandler);
-    canvas.addEventListener('touchmove', moveHandler);
-    canvas.addEventListener('mousedown', dropHandler);
-    canvas.addEventListener('touchstart', dropHandler);
-}
+    canvas.addEventListener('mousedown', drop);
+    canvas.addEventListener('touchstart', (e) => { e.preventDefault(); drop(); });
 
-function setupCollision() {
+    // 合成偵測
     Events.on(engine, 'collisionStart', (event) => {
         event.pairs.forEach(pair => {
             const { bodyA, bodyB } = pair;
             if (bodyA.label.startsWith('jelly_') && bodyA.label === bodyB.label) {
-                const level = bodyA.level;
-                if (level < 6) {
-                    const newX = (bodyA.position.x + bodyB.position.x) / 2;
-                    const newY = (bodyA.position.y + bodyB.position.y) / 2;
-                    
+                const lvl = bodyA.level;
+                if (lvl < 6) {
+                    const midX = (bodyA.position.x + bodyB.position.x) / 2;
+                    const midY = (bodyA.position.y + bodyB.position.y) / 2;
                     Composite.remove(engine.world, [bodyA, bodyB]);
                     
-                    mergeSound.currentTime = 0;
-                    mergeSound.play();
+                    mergeSound.play().catch(()=>{});
                     
-                    const nextLevel = level + 1;
-                    const newJelly = Bodies.circle(newX, newY, jellyConfigs[nextLevel].r, {
+                    const nextLevel = lvl + 1;
+                    const newJelly = Bodies.circle(midX, midY, jellyConfigs[nextLevel].r, {
                         label: 'jelly_' + nextLevel,
-                        restitution: 0.4
+                        restitution: 0.6
                     });
                     newJelly.level = nextLevel;
                     Composite.add(engine.world, newJelly);
-                    
-                    score += (level + 1) * 10;
+                    score += (lvl + 1) * 10;
                     document.getElementById('score').innerText = score;
                 }
             }
         });
     });
 
-    // 遊戲結束判定
     Events.on(engine, 'afterUpdate', () => {
         Composite.allBodies(engine.world).forEach(body => {
-            if (!body.isStatic && body.position.y < 120 && body !== currentJelly) {
-                if (Math.abs(body.velocity.y) < 0.1) endGame();
+            if (!body.isStatic && body.position.y < 100 && body !== currentJelly) {
+                if (body.velocity.y < 0.1) {
+                    isGameOver = true;
+                    document.getElementById('game-over').style.display = 'block';
+                    document.getElementById('final-score').innerText = score;
+                }
             }
         });
     });
 }
 
-// --- 核心：繪製畫風 ---
-function animateCustom() {
-    const ctx = render.context;
-    
+// --- 可愛風繪製邏輯 ---
+function drawLoop() {
     Events.on(render, 'afterRender', () => {
+        const ctx = render.context;
         const bodies = Composite.allBodies(engine.world);
-        const time = engine.timing.timestamp;
 
         bodies.forEach(body => {
             if (body.isStatic || !body.label.startsWith('jelly_')) return;
             
             const config = jellyConfigs[body.level];
             const { x, y } = body.position;
-            
+            const r = config.r;
+
             ctx.save();
             ctx.translate(x, y);
             ctx.rotate(body.angle);
 
-            // 1. 繪製觸手 (隨重力與速度擺動)
+            // 1. 傘蓋 (身體)
             ctx.beginPath();
-            ctx.lineWidth = 2;
-            ctx.strokeStyle = config.glow;
-            ctx.globalAlpha = 0.4;
-            for (let i = 0; i < config.tentacles; i++) {
-                const offsetX = (i - config.tentacles/2) * (config.r / 3);
-                ctx.moveTo(offsetX, 0);
-                const wave = Math.sin(time * 0.005 + i) * 5;
-                // 觸手長度隨等級變長
-                const tLen = config.r * 1.5;
-                ctx.bezierCurveTo(offsetX + wave, tLen/2, offsetX - wave, tLen/2, offsetX, tLen);
-            }
+            ctx.arc(0, 0, r, 0, Math.PI * 2);
+            ctx.fillStyle = config.color;
+            ctx.globalAlpha = 0.85;
+            ctx.fill();
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 3;
             ctx.stroke();
 
-            // 2. 繪製傘蓋發光 (Glow)
-            const grad = ctx.createRadialGradient(0, -5, 0, 0, -5, config.r);
-            grad.addColorStop(0, '#fff');
-            grad.addColorStop(0.2, config.color);
-            grad.addColorStop(1, 'transparent');
-            
+            // 2. 腮紅
             ctx.beginPath();
-            ctx.arc(0, 0, config.r, Math.PI, 0); // 半圓傘蓋
-            ctx.fillStyle = grad;
-            ctx.globalAlpha = 0.8;
-            ctx.shadowBlur = 15;
-            ctx.shadowColor = config.glow;
+            ctx.fillStyle = '#ffb3ba';
+            ctx.globalAlpha = 0.4;
+            ctx.arc(-r*0.4, 0, r*0.15, 0, Math.PI*2);
+            ctx.arc(r*0.4, 0, r*0.15, 0, Math.PI*2);
+            ctx.fill();
+
+            // 3. 眼睛 (會隨機眨眼的可愛黑豆眼)
+            ctx.globalAlpha = 1;
+            ctx.fillStyle = '#333';
+            const eyeOffset = r * 0.25;
+            ctx.beginPath();
+            ctx.arc(-eyeOffset, -r*0.1, config.eyeSize, 0, Math.PI*2);
+            ctx.arc(eyeOffset, -r*0.1, config.eyeSize, 0, Math.PI*2);
             ctx.fill();
             
-            // 3. 繪製內部核心
+            // 4. 小嘴巴
             ctx.beginPath();
-            ctx.arc(0, -2, config.r * 0.3, 0, Math.PI * 2);
-            ctx.fillStyle = '#fff';
-            ctx.globalAlpha = 0.5;
+            ctx.arc(0, r*0.1, r*0.1, 0, Math.PI);
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // 5. 底部波浪 (小觸手)
+            ctx.beginPath();
+            ctx.fillStyle = config.color;
+            for(let i=0; i<5; i++){
+                const tx = -r + (i * r * 0.4) + r*0.2;
+                ctx.arc(tx, r*0.8, r*0.2, 0, Math.PI);
+            }
             ctx.fill();
 
             ctx.restore();
         });
 
-        // 繪製頂部死亡預警線
+        // 死亡警示線
         ctx.beginPath();
+        ctx.moveTo(0, 100); ctx.lineTo(360, 100);
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
         ctx.setLineDash([5, 5]);
-        ctx.moveTo(0, 120);
-        ctx.lineTo(360, 120);
-        ctx.strokeStyle = 'rgba(255, 0, 0, 0.3)';
         ctx.stroke();
         ctx.setLineDash([]);
     });
 }
 
-function endGame() {
-    isGameOver = true;
-    document.getElementById('game-over').style.display = 'block';
-    document.getElementById('final-score').innerText = score;
-    bgm.pause();
-}
-
-// 讀取最高分
 document.getElementById('highscore').innerText = localStorage.getItem('jellyHighscore') || 0;
-
 init();
 </script>
 </body>
