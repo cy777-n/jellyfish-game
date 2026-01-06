@@ -3,15 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>水母合成遊戲</title>
+    <title>水母合成大作戰</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
     <style>
         body { margin: 0; background: #000b14; font-family: 'Arial Rounded MT Bold', sans-serif; overflow: hidden; display: flex; flex-direction: column; align-items: center; height: 100vh; touch-action: none; }
         #ui-top { width: 100%; max-width: 600px; display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; box-sizing: border-box; z-index: 10; }
         .score-box { color: #fff; font-size: 14px; background: rgba(255, 255, 255, 0.1); padding: 5px 15px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.2); text-align: center; min-width: 70px; }
         #evolution-guide { display: flex; justify-content: center; align-items: center; background: rgba(255, 255, 255, 0.05); padding: 5px 10px; border-radius: 15px; }
-        .guide-circle { border-radius: 50%; margin: 0 2px; border: 1px solid #fff; }
-        .guide-arrow { color: rgba(255,255,255,0.2); font-size: 8px; }
+        .guide-circle { border-radius: 50%; margin: 0 3px; border: 1px solid #fff; }
+        .guide-arrow { color: rgba(255,255,255,0.2); font-size: 10px; }
         #game-container { width: 98%; max-width: 600px; flex: 1; position: relative; border: 4px solid #4fc3f7; border-top: none; border-radius: 0 0 30px 30px; background: linear-gradient(to bottom, #001a2e, #000b14); box-shadow: 0 10px 40px rgba(0,0,0,0.7); margin-bottom: 10px; }
         canvas { display: block; width: 100% !important; height: 100% !important; }
         #game-over { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(255, 255, 255, 0.95); padding: 30px; border-radius: 25px; text-align: center; display: none; z-index: 100; width: 200px; }
@@ -40,18 +40,16 @@ let score = 0, isGameOver = false, isTouching = false;
 let highscore = parseInt(localStorage.getItem("jellyHighscore")) || 0;
 
 const jellyConfigs = [
-    { r: 12, color: '#FF99CC', eyeSize: 1.5 },
-    { r: 18, color: '#99FF99', eyeSize: 2 },
-    { r: 26, color: '#4FC3F7', eyeSize: 2.5 },
-    { r: 35, color: '#FFF176', eyeSize: 3.5 },
-    { r: 50, color: '#BA68C8', eyeSize: 5 },
-    { r: 68, color: '#FFB74D', eyeSize: 6.5 },
-    { r: 85, color: '#FF5252', eyeSize: 7.5 },
-    { r: 105, color: '#00E5FF', eyeSize: 7.5 },
-    { r: 125, color: '#D500F9', eyeSize: 9 }
+    { r: 15, color: '#FF99CC', eyeSize: 1.5 },
+    { r: 25, color: '#99FF99', eyeSize: 2.5 },
+    { r: 40, color: '#4FC3F7', eyeSize: 3.5 },
+    { r: 60, color: '#FFF176', eyeSize: 5.5 }, 
+    { r: 85, color: '#BA68C8', eyeSize: 7.5 },
+    { r: 110, color: '#FFB74D', eyeSize: 8.5 },
+    { r: 140, color: '#FF5252', eyeSize: 10.5 } 
 ];
 
-const DEADLINE_Y = 90; 
+const DEADLINE_Y = 100;
 
 function init() {
     document.getElementById('highscore').innerText = highscore;
@@ -81,12 +79,12 @@ function createGuide() {
     jellyConfigs.forEach((config, index) => {
         const circle = document.createElement('div');
         circle.className = 'guide-circle';
-        const size = 5 + index * 1.5; 
+        const size = 6 + index * 2.5; 
         circle.style.width = size + 'px';
         circle.style.height = size + 'px';
         circle.style.background = config.color;
         guide.appendChild(circle);
-        if(index < 8) {
+        if(index < 6) {
             const arrow = document.createElement('div');
             arrow.className = 'guide-arrow';
             arrow.innerText = '›';
@@ -107,11 +105,11 @@ function spawnNew() {
     if (isGameOver) return;
     let level;
     const rand = Math.random();
-    if (rand < 0.2) { level = 3; }
+    if (rand < 0.15) { level = 3; } 
     else { level = Math.floor(Math.random() * 3); }
     const cw = render.canvas.width;
-    currentJelly = Bodies.circle(cw/2, 40, jellyConfigs[level].r, {
-        isStatic: true, label: 'jelly_' + level, restitution: 0.2, friction: 0.6 
+    currentJelly = Bodies.circle(cw/2, 45, jellyConfigs[level].r, {
+        isStatic: true, label: 'jelly_' + level, restitution: 0.2, friction: 0.8 
     });
     currentJelly.level = level;
     Composite.add(engine.world, currentJelly);
@@ -124,7 +122,7 @@ function setupEvents() {
         const x = clientX - rect.left;
         const r = jellyConfigs[currentJelly.level].r;
         const cw = canvas.width;
-        Body.setPosition(currentJelly, { x: Math.max(r, Math.min(cw - r, x)), y: 40 });
+        Body.setPosition(currentJelly, { x: Math.max(r, Math.min(cw - r, x)), y: 45 });
     };
     const handleStart = (e) => {
         if (isGameOver) return;
@@ -144,7 +142,7 @@ function setupEvents() {
         Body.setStatic(currentJelly, false);
         dropSound.play().catch(()=>{});
         currentJelly = null;
-        setTimeout(spawnNew, 1000);
+        setTimeout(spawnNew, 900);
     };
     canvas.addEventListener('mousedown', handleStart);
     window.addEventListener('mousemove', handleMove);
@@ -157,7 +155,7 @@ function setupEvents() {
             const { bodyA, bodyB } = pair;
             if (bodyA.label && bodyA.label === bodyB.label && bodyA.label.startsWith('jelly_')) {
                 const lvl = bodyA.level;
-                if (lvl < 8) {
+                if (lvl < 6) {
                     const midX = (bodyA.position.x + bodyB.position.x) / 2;
                     const midY = (bodyA.position.y + bodyB.position.y) / 2;
                     if (Composite.get(engine.world, bodyA.id, 'body') && Composite.get(engine.world, bodyB.id, 'body')) {
@@ -165,11 +163,11 @@ function setupEvents() {
                         mergeSound.play().catch(()=>{});
                         const nextLevel = lvl + 1;
                         const newJelly = Bodies.circle(midX, midY, jellyConfigs[nextLevel].r, {
-                            label: 'jelly_' + nextLevel, restitution: 0.2, friction: 0.6
+                            label: 'jelly_' + nextLevel, restitution: 0.2, friction: 0.8
                         });
                         newJelly.level = nextLevel;
                         Composite.add(engine.world, newJelly);
-                        updateScore((lvl + 1) * 20); 
+                        updateScore((lvl + 1) * 50);
                     }
                 }
             }
@@ -205,7 +203,7 @@ function drawLoop() {
             ctx.globalAlpha = 0.85;
             ctx.fill();
             ctx.strokeStyle = '#FFFFFF';
-            ctx.lineWidth = 2.5;
+            ctx.lineWidth = 3;
             ctx.globalAlpha = 1;
             ctx.stroke();
             ctx.beginPath();
@@ -223,7 +221,7 @@ function drawLoop() {
             ctx.beginPath();
             ctx.arc(0, r*0.1, r*0.12, 0.2, Math.PI - 0.2);
             ctx.strokeStyle = '#212121';
-            ctx.lineWidth = 1.5;
+            ctx.lineWidth = 2;
             ctx.stroke();
             ctx.beginPath();
             ctx.fillStyle = config.color;
@@ -234,14 +232,14 @@ function drawLoop() {
             }
             ctx.fill();
             ctx.strokeStyle = '#FFFFFF';
-            ctx.lineWidth = 1.2;
+            ctx.lineWidth = 1.5;
             ctx.stroke();
             ctx.restore();
         });
         ctx.beginPath();
         ctx.setLineDash([5, 10]);
         ctx.moveTo(0, DEADLINE_Y); ctx.lineTo(render.canvas.width, DEADLINE_Y);
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
         ctx.stroke();
         ctx.setLineDash([]);
     });
