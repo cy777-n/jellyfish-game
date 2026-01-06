@@ -115,7 +115,7 @@ function createJelly(level=1, x=120) {
   j.innerHTML = `<div class="tentacles"></div>`;
   tank.appendChild(j);
   j.x = x;
-  j.y = 20;
+  j.y = 0;
   j.style.left = j.x + "px";
   j.style.top = j.y + "px";
   jellies.push(j);
@@ -123,7 +123,9 @@ function createJelly(level=1, x=120) {
 }
 
 function spawnNew() {
-  current = createJelly(1, tank.clientWidth/2 - 20);
+  const randomLevel = Math.floor(Math.random() * MAX_LEVEL) + 1; // 隨機 1~7
+  const xPos = Math.random() * (tank.clientWidth - 100); // 隨機橫向位置
+  current = createJelly(randomLevel, xPos);
   isFalling = false;
 }
 
@@ -156,7 +158,6 @@ function fall() {
 
   let landed = false;
 
-  // 碰撞檢查
   for(let j of jellies){
     if(j === current) continue;
     if(isCollide(current, j) && parseInt(j.dataset.level) === parseInt(current.dataset.level)){
