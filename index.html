@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>水母合成遊戲</title>
+    <title>九階水母合成遊戲</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
     <style>
         body {
@@ -35,24 +35,24 @@
             border-radius: 10px;
             border: 1px solid rgba(255,255,255,0.2);
             text-align: center;
-            min-width: 80px;
+            min-width: 70px;
         }
         #evolution-guide {
             display: flex;
             justify-content: center;
             align-items: center;
             background: rgba(255, 255, 255, 0.05);
-            padding: 8px 12px;
+            padding: 5px 10px;
             border-radius: 15px;
         }
         .guide-circle {
             border-radius: 50%;
-            margin: 0 4px;
+            margin: 0 2px;
             border: 1px solid #fff;
         }
         .guide-arrow {
             color: rgba(255,255,255,0.2);
-            font-size: 10px;
+            font-size: 8px;
         }
         #game-container {
             width: 98%;
@@ -119,13 +119,15 @@ let score = 0, isGameOver = false, isTouching = false;
 let highscore = parseInt(localStorage.getItem("jellyHighscore")) || 0;
 
 const jellyConfigs = [
-    { r: 15, color: '#FF99CC', eyeSize: 2 },
-    { r: 20, color: '#99FF99', eyeSize: 2.5 },
-    { r: 30, color: '#4FC3F7', eyeSize: 3.5 },
-    { r: 42, color: '#FFF176', eyeSize: 5 },
-    { r: 55, color: '#BA68C8', eyeSize: 6.5 },
-    { r: 68, color: '#FFB74D', eyeSize: 7.5 },
-    { r: 82, color: '#FF5252', eyeSize: 9 }
+    { r: 12, color: '#FF99CC', eyeSize: 1.5 },
+    { r: 18, color: '#99FF99', eyeSize: 2 },
+    { r: 26, color: '#4FC3F7', eyeSize: 2.5 },
+    { r: 35, color: '#FFF176', eyeSize: 3.5 },
+    { r: 45, color: '#BA68C8', eyeSize: 4.5 },
+    { r: 54, color: '#FFB74D', eyeSize: 5.5 },
+    { r: 62, color: '#FF5252', eyeSize: 6.5 },
+    { r: 69, color: '#00E5FF', eyeSize: 7 },
+    { r: 75, color: '#D500F9', eyeSize: 7.5 }
 ];
 
 const DEADLINE_Y = 60;
@@ -133,33 +135,22 @@ const DEADLINE_Y = 60;
 function init() {
     document.getElementById('highscore').innerText = highscore;
     createGuide();
-
     const container = document.getElementById('game-container');
     const cw = container.clientWidth;
     const ch = container.clientHeight;
-
     engine = Engine.create();
     render = Render.create({
         element: container,
         engine: engine,
-        options: {
-            width: cw,
-            height: ch,
-            wireframes: false,
-            background: 'transparent',
-            pixelRatio: window.devicePixelRatio
-        }
+        options: { width: cw, height: ch, wireframes: false, background: 'transparent', pixelRatio: window.devicePixelRatio }
     });
-
     const ground = Bodies.rectangle(cw/2, ch + 20, cw, 40, { isStatic: true });
     const leftWall = Bodies.rectangle(-20, ch/2, 40, ch, { isStatic: true });
     const rightWall = Bodies.rectangle(cw + 20, ch/2, 40, ch, { isStatic: true });
     Composite.add(engine.world, [ground, leftWall, rightWall]);
-
     Render.run(render);
     runner = Runner.create();
     Runner.run(runner, engine);
-
     spawnNew();
     setupEvents();
     drawLoop();
@@ -170,12 +161,12 @@ function createGuide() {
     jellyConfigs.forEach((config, index) => {
         const circle = document.createElement('div');
         circle.className = 'guide-circle';
-        const size = 8 + index * 2.5; 
+        const size = 6 + index * 2; 
         circle.style.width = size + 'px';
         circle.style.height = size + 'px';
         circle.style.background = config.color;
         guide.appendChild(circle);
-        if(index < 6) {
+        if(index < 8) {
             const arrow = document.createElement('div');
             arrow.className = 'guide-arrow';
             arrow.innerText = '›';
@@ -196,7 +187,15 @@ function updateScore(pts) {
 
 function spawnNew() {
     if (isGameOver) return;
-    const level = Math.floor(Math.random() * 3);
+    
+    let level;
+    const rand = Math.random();
+    if (rand < 0.1) {
+        level = 3; 
+    } else {
+        level = Math.floor(Math.random() * 3); 
+    }
+
     const cw = render.canvas.width;
     currentJelly = Bodies.circle(cw/2, 35, jellyConfigs[level].r, {
         isStatic: true,
@@ -210,33 +209,26 @@ function spawnNew() {
 
 function setupEvents() {
     const canvas = render.canvas;
-
     const updatePos = (clientX) => {
         if (!currentJelly || isGameOver) return;
         const rect = canvas.getBoundingClientRect();
         const x = clientX - rect.left;
         const r = jellyConfigs[currentJelly.level].r;
         const cw = canvas.width;
-        Body.setPosition(currentJelly, { 
-            x: Math.max(r, Math.min(cw - r, x)), 
-            y: 35 
-        });
+        Body.setPosition(currentJelly, { x: Math.max(r, Math.min(cw - r, x)), y: 35 });
     };
-
     const handleStart = (e) => {
         if (isGameOver) return;
         isTouching = true;
         const x = e.touches ? e.touches[0].clientX : e.clientX;
         updatePos(x);
     };
-
     const handleMove = (e) => {
         if (isTouching) {
             const x = e.touches ? e.touches[0].clientX : e.clientX;
             updatePos(x);
         }
     };
-
     const handleEnd = () => {
         if (!currentJelly || isGameOver || !isTouching) return;
         isTouching = false;
@@ -245,7 +237,6 @@ function setupEvents() {
         currentJelly = null;
         setTimeout(spawnNew, 800);
     };
-
     canvas.addEventListener('mousedown', handleStart);
     window.addEventListener('mousemove', handleMove);
     window.addEventListener('mouseup', handleEnd);
@@ -258,7 +249,7 @@ function setupEvents() {
             const { bodyA, bodyB } = pair;
             if (bodyA.label && bodyA.label === bodyB.label && bodyA.label.startsWith('jelly_')) {
                 const lvl = bodyA.level;
-                if (lvl < 6) {
+                if (lvl < 8) {
                     const midX = (bodyA.position.x + bodyB.position.x) / 2;
                     const midY = (bodyA.position.y + bodyB.position.y) / 2;
                     if (Composite.get(engine.world, bodyA.id, 'body') && Composite.get(engine.world, bodyB.id, 'body')) {
@@ -271,7 +262,7 @@ function setupEvents() {
                         });
                         newJelly.level = nextLevel;
                         Composite.add(engine.world, newJelly);
-                        updateScore((lvl + 1) * 12);
+                        updateScore((lvl + 1) * 15);
                     }
                 }
             }
@@ -295,35 +286,29 @@ function drawLoop() {
     Events.on(render, 'afterRender', () => {
         const ctx = render.context;
         const bodies = Composite.allBodies(engine.world);
-
         bodies.forEach(body => {
             if (body.isStatic || !body.label.startsWith('jelly_')) return;
             const config = jellyConfigs[body.level];
             const { x, y } = body.position;
             const r = config.r;
-
             ctx.save();
             ctx.translate(x, y);
             ctx.rotate(body.angle);
-            
             ctx.beginPath();
             ctx.arc(0, 0, r, 0, Math.PI * 2);
             ctx.fillStyle = config.color;
             ctx.globalAlpha = 0.85;
             ctx.fill();
-            
             ctx.strokeStyle = '#FFFFFF';
-            ctx.lineWidth = 2.5;
+            ctx.lineWidth = 2;
             ctx.globalAlpha = 1;
             ctx.stroke();
-
             ctx.beginPath();
             ctx.fillStyle = '#FF80AB';
             ctx.globalAlpha = 0.3;
             ctx.arc(-r*0.4, 0, r*0.18, 0, Math.PI*2);
             ctx.arc(r*0.4, 0, r*0.18, 0, Math.PI*2);
             ctx.fill();
-
             ctx.globalAlpha = 1;
             ctx.fillStyle = '#212121';
             ctx.beginPath();
@@ -333,9 +318,8 @@ function drawLoop() {
             ctx.beginPath();
             ctx.arc(0, r*0.1, r*0.12, 0.2, Math.PI - 0.2);
             ctx.strokeStyle = '#212121';
-            ctx.lineWidth = 2;
+            ctx.lineWidth = 1.5;
             ctx.stroke();
-
             ctx.beginPath();
             ctx.fillStyle = config.color;
             for(let i=0; i<5; i++){
@@ -345,12 +329,10 @@ function drawLoop() {
             }
             ctx.fill();
             ctx.strokeStyle = '#FFFFFF';
-            ctx.lineWidth = 1.5;
+            ctx.lineWidth = 1;
             ctx.stroke();
-
             ctx.restore();
         });
-        
         ctx.beginPath();
         ctx.setLineDash([5, 10]);
         ctx.moveTo(0, DEADLINE_Y); ctx.lineTo(render.canvas.width, DEADLINE_Y);
@@ -359,7 +341,6 @@ function drawLoop() {
         ctx.setLineDash([]);
     });
 }
-
 init();
 </script>
 </body>
