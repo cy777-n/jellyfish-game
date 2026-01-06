@@ -119,13 +119,13 @@ let score = 0, isGameOver = false, isTouching = false;
 let highscore = parseInt(localStorage.getItem("jellyHighscore")) || 0;
 
 const jellyConfigs = [
-    { r: 20, color: '#FF99CC', eyeSize: 2 },
-    { r: 25, color: '#99FF99', eyeSize: 2.5 },
-    { r: 35, color: '#4FC3F7', eyeSize: 3.5 },
-    { r: 50, color: '#FFF176', eyeSize: 5 },
-    { r: 65, color: '#BA68C8', eyeSize: 6.5 },
-    { r: 75, color: '#FFB74D', eyeSize: 7.5 },
-    { r: 90, color: '#FF5252', eyeSize: 9 }
+    { r: 15, color: '#FF99CC', eyeSize: 2 },
+    { r: 20, color: '#99FF99', eyeSize: 2.5 },
+    { r: 30, color: '#4FC3F7', eyeSize: 3.5 },
+    { r: 42, color: '#FFF176', eyeSize: 5 },
+    { r: 55, color: '#BA68C8', eyeSize: 6.5 },
+    { r: 68, color: '#FFB74D', eyeSize: 7.5 },
+    { r: 82, color: '#FF5252', eyeSize: 9 }
 ];
 
 const DEADLINE_Y = 60;
@@ -170,7 +170,7 @@ function createGuide() {
     jellyConfigs.forEach((config, index) => {
         const circle = document.createElement('div');
         circle.className = 'guide-circle';
-        const size = 8 + index * 3; 
+        const size = 8 + index * 2.5; 
         circle.style.width = size + 'px';
         circle.style.height = size + 'px';
         circle.style.background = config.color;
