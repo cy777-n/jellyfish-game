@@ -6,114 +6,35 @@
     <title>水母合成遊戲</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
     <style>
-        body {
-            margin: 0;
-            background: #000b14;
-            font-family: 'Arial Rounded MT Bold', sans-serif;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            height: 100vh;
-            touch-action: none;
-        }
-        #ui-top {
-            width: 100%;
-            max-width: 600px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px 15px;
-            box-sizing: border-box;
-            z-index: 10;
-        }
-        .score-box {
-            color: #fff;
-            font-size: 14px;
-            background: rgba(255, 255, 255, 0.1);
-            padding: 5px 15px;
-            border-radius: 10px;
-            border: 1px solid rgba(255,255,255,0.2);
-            text-align: center;
-            min-width: 70px;
-        }
-        #evolution-guide {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background: rgba(255, 255, 255, 0.05);
-            padding: 5px 10px;
-            border-radius: 15px;
-        }
-        .guide-circle {
-            border-radius: 50%;
-            margin: 0 2px;
-            border: 1px solid #fff;
-        }
-        .guide-arrow {
-            color: rgba(255,255,255,0.2);
-            font-size: 8px;
-        }
-        #game-container {
-            width: 98%;
-            max-width: 600px;
-            flex: 1;
-            position: relative;
-            border: 4px solid #4fc3f7;
-            border-top: none;
-            border-radius: 0 0 30px 30px;
-            background: linear-gradient(to bottom, #001a2e, #000b14);
-            box-shadow: 0 10px 40px rgba(0,0,0,0.7);
-            margin-bottom: 10px;
-        }
+        body { margin: 0; background: #000b14; font-family: 'Arial Rounded MT Bold', sans-serif; overflow: hidden; display: flex; flex-direction: column; align-items: center; height: 100vh; touch-action: none; }
+        #ui-top { width: 100%; max-width: 600px; display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; box-sizing: border-box; z-index: 10; }
+        .score-box { color: #fff; font-size: 14px; background: rgba(255, 255, 255, 0.1); padding: 5px 15px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.2); text-align: center; min-width: 70px; }
+        #evolution-guide { display: flex; justify-content: center; align-items: center; background: rgba(255, 255, 255, 0.05); padding: 5px 10px; border-radius: 15px; }
+        .guide-circle { border-radius: 50%; margin: 0 2px; border: 1px solid #fff; }
+        .guide-arrow { color: rgba(255,255,255,0.2); font-size: 8px; }
+        #game-container { width: 98%; max-width: 600px; flex: 1; position: relative; border: 4px solid #4fc3f7; border-top: none; border-radius: 0 0 30px 30px; background: linear-gradient(to bottom, #001a2e, #000b14); box-shadow: 0 10px 40px rgba(0,0,0,0.7); margin-bottom: 10px; }
         canvas { display: block; width: 100% !important; height: 100% !important; }
-        #game-over {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(255, 255, 255, 0.95);
-            padding: 30px;
-            border-radius: 25px;
-            text-align: center;
-            display: none;
-            z-index: 100;
-            width: 200px;
-        }
-        button {
-            background: #ff4081;
-            border: none;
-            color: white;
-            padding: 12px 25px;
-            border-radius: 50px;
-            font-weight: bold;
-            cursor: pointer;
-            margin-top: 15px;
-        }
+        #game-over { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(255, 255, 255, 0.95); padding: 30px; border-radius: 25px; text-align: center; display: none; z-index: 100; width: 200px; }
+        button { background: #ff4081; border: none; color: white; padding: 12px 25px; border-radius: 50px; font-weight: bold; cursor: pointer; margin-top: 15px; }
     </style>
 </head>
 <body>
-
 <div id="ui-top">
     <div class="score-box">分數<br><span id="score">0</span></div>
     <div id="evolution-guide"></div>
     <div class="score-box">最高<br><span id="highscore">0</span></div>
 </div>
-
 <div id="game-container">
     <div id="game-over">
-        <h2 style="color: #ff4081; margin: 0;">遊戲結束</h2>
+        <h2 style="color: #ff4081; margin: 0;">空間已耗盡</h2>
         <p style="color: #333; margin: 5px 0;">得分: <span id="final-score">0</span></p>
-        <button onclick="location.reload()">再玩一次</button>
+        <button onclick="location.reload()">重新挑戰</button>
     </div>
 </div>
-
 <script>
 const { Engine, Render, Runner, Bodies, Composite, Events, Body } = Matter;
-
 const mergeSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2020/2020-preview.mp3');
 const dropSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2004/2004-preview.mp3');
-
 let engine, render, runner, currentJelly = null;
 let score = 0, isGameOver = false, isTouching = false;
 let highscore = parseInt(localStorage.getItem("jellyHighscore")) || 0;
@@ -123,14 +44,14 @@ const jellyConfigs = [
     { r: 18, color: '#99FF99', eyeSize: 2 },
     { r: 26, color: '#4FC3F7', eyeSize: 2.5 },
     { r: 35, color: '#FFF176', eyeSize: 3.5 },
-    { r: 45, color: '#BA68C8', eyeSize: 4.5 },
-    { r: 54, color: '#FFB74D', eyeSize: 5.5 },
-    { r: 62, color: '#FF5252', eyeSize: 6.5 },
-    { r: 69, color: '#00E5FF', eyeSize: 7 },
-    { r: 75, color: '#D500F9', eyeSize: 7.5 }
+    { r: 50, color: '#BA68C8', eyeSize: 5 },
+    { r: 68, color: '#FFB74D', eyeSize: 6.5 },
+    { r: 85, color: '#FF5252', eyeSize: 7.5 },
+    { r: 105, color: '#00E5FF', eyeSize: 7.5 },
+    { r: 125, color: '#D500F9', eyeSize: 9 }
 ];
 
-const DEADLINE_Y = 60;
+const DEADLINE_Y = 90; 
 
 function init() {
     document.getElementById('highscore').innerText = highscore;
@@ -155,13 +76,12 @@ function init() {
     setupEvents();
     drawLoop();
 }
-
 function createGuide() {
     const guide = document.getElementById('evolution-guide');
     jellyConfigs.forEach((config, index) => {
         const circle = document.createElement('div');
         circle.className = 'guide-circle';
-        const size = 6 + index * 2; 
+        const size = 5 + index * 1.5; 
         circle.style.width = size + 'px';
         circle.style.height = size + 'px';
         circle.style.background = config.color;
@@ -174,7 +94,6 @@ function createGuide() {
         }
     });
 }
-
 function updateScore(pts) {
     score += pts;
     document.getElementById('score').innerText = score;
@@ -184,29 +103,19 @@ function updateScore(pts) {
         localStorage.setItem("jellyHighscore", highscore);
     }
 }
-
 function spawnNew() {
     if (isGameOver) return;
-    
     let level;
     const rand = Math.random();
-    if (rand < 0.1) {
-        level = 3; 
-    } else {
-        level = Math.floor(Math.random() * 3); 
-    }
-
+    if (rand < 0.2) { level = 3; }
+    else { level = Math.floor(Math.random() * 3); }
     const cw = render.canvas.width;
-    currentJelly = Bodies.circle(cw/2, 35, jellyConfigs[level].r, {
-        isStatic: true,
-        label: 'jelly_' + level,
-        restitution: 0.45,
-        friction: 0.1
+    currentJelly = Bodies.circle(cw/2, 40, jellyConfigs[level].r, {
+        isStatic: true, label: 'jelly_' + level, restitution: 0.2, friction: 0.6 
     });
     currentJelly.level = level;
     Composite.add(engine.world, currentJelly);
 }
-
 function setupEvents() {
     const canvas = render.canvas;
     const updatePos = (clientX) => {
@@ -215,7 +124,7 @@ function setupEvents() {
         const x = clientX - rect.left;
         const r = jellyConfigs[currentJelly.level].r;
         const cw = canvas.width;
-        Body.setPosition(currentJelly, { x: Math.max(r, Math.min(cw - r, x)), y: 35 });
+        Body.setPosition(currentJelly, { x: Math.max(r, Math.min(cw - r, x)), y: 40 });
     };
     const handleStart = (e) => {
         if (isGameOver) return;
@@ -235,7 +144,7 @@ function setupEvents() {
         Body.setStatic(currentJelly, false);
         dropSound.play().catch(()=>{});
         currentJelly = null;
-        setTimeout(spawnNew, 800);
+        setTimeout(spawnNew, 1000);
     };
     canvas.addEventListener('mousedown', handleStart);
     window.addEventListener('mousemove', handleMove);
@@ -243,7 +152,6 @@ function setupEvents() {
     canvas.addEventListener('touchstart', (e) => { e.preventDefault(); handleStart(e); }, {passive: false});
     canvas.addEventListener('touchmove', (e) => { e.preventDefault(); handleMove(e); }, {passive: false});
     canvas.addEventListener('touchend', (e) => { e.preventDefault(); handleEnd(); }, {passive: false});
-
     Events.on(engine, 'collisionStart', (event) => {
         event.pairs.forEach(pair => {
             const { bodyA, bodyB } = pair;
@@ -257,22 +165,20 @@ function setupEvents() {
                         mergeSound.play().catch(()=>{});
                         const nextLevel = lvl + 1;
                         const newJelly = Bodies.circle(midX, midY, jellyConfigs[nextLevel].r, {
-                            label: 'jelly_' + nextLevel,
-                            restitution: 0.5
+                            label: 'jelly_' + nextLevel, restitution: 0.2, friction: 0.6
                         });
                         newJelly.level = nextLevel;
                         Composite.add(engine.world, newJelly);
-                        updateScore((lvl + 1) * 15);
+                        updateScore((lvl + 1) * 20); 
                     }
                 }
             }
         });
     });
-
     Events.on(engine, 'afterUpdate', () => {
         Composite.allBodies(engine.world).forEach(body => {
             if (!body.isStatic && body.position.y < DEADLINE_Y && body !== currentJelly) {
-                if (Math.abs(body.velocity.y) < 0.05) {
+                if (Math.abs(body.velocity.y) < 0.02) {
                     isGameOver = true;
                     document.getElementById('game-over').style.display = 'block';
                     document.getElementById('final-score').innerText = score;
@@ -281,7 +187,6 @@ function setupEvents() {
         });
     });
 }
-
 function drawLoop() {
     Events.on(render, 'afterRender', () => {
         const ctx = render.context;
@@ -300,7 +205,7 @@ function drawLoop() {
             ctx.globalAlpha = 0.85;
             ctx.fill();
             ctx.strokeStyle = '#FFFFFF';
-            ctx.lineWidth = 2;
+            ctx.lineWidth = 2.5;
             ctx.globalAlpha = 1;
             ctx.stroke();
             ctx.beginPath();
@@ -329,14 +234,14 @@ function drawLoop() {
             }
             ctx.fill();
             ctx.strokeStyle = '#FFFFFF';
-            ctx.lineWidth = 1;
+            ctx.lineWidth = 1.2;
             ctx.stroke();
             ctx.restore();
         });
         ctx.beginPath();
         ctx.setLineDash([5, 10]);
         ctx.moveTo(0, DEADLINE_Y); ctx.lineTo(render.canvas.width, DEADLINE_Y);
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
         ctx.stroke();
         ctx.setLineDash([]);
     });
