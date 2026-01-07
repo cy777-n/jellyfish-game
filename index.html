@@ -7,18 +7,18 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
     <style>
         body { margin: 0; background: #000b14; font-family: 'Arial Rounded MT Bold', sans-serif; overflow: hidden; display: flex; flex-direction: column; align-items: center; height: 100vh; height: -webkit-fill-available; touch-action: none; }
-        #ui-top { width: 100%; max-width: 600px; display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; box-sizing: border-box; z-index: 10; flex-shrink: 0; }
-        .score-box { color: #fff; font-size: 13px; background: rgba(255, 255, 255, 0.1); padding: 5px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.2); text-align: center; min-width: 80px; backdrop-filter: blur(5px); }
-        .score-box span { display: block; font-size: 18px; font-weight: bold; }
-        .next-hint { font-size: 10px; color: rgba(255,255,255,0.6); margin-top: 4px; display: flex; align-items: center; justify-content: center; gap: 5px; }
-        #next-dot { width: 10px; height: 10px; border-radius: 50%; border: 1px solid #fff; box-shadow: 0 0 5px rgba(255,255,255,0.3); }
-        #evolution-guide { display: flex; justify-content: center; align-items: center; background: rgba(255, 255, 255, 0.08); padding: 8px 12px; border-radius: 15px; flex-wrap: wrap; max-width: 50%; border: 1px solid rgba(255,255,255,0.1); }
+        #ui-top { width: 100%; max-width: 600px; display: flex; justify-content: space-between; align-items: center; padding: 8px 15px; box-sizing: border-box; z-index: 10; flex-shrink: 0; }
+        .score-box { color: #fff; font-size: 12px; background: rgba(255, 255, 255, 0.1); padding: 4px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); text-align: center; min-width: 70px; backdrop-filter: blur(5px); }
+        .score-box span { display: block; font-size: 16px; font-weight: bold; }
+        .next-hint { font-size: 9px; color: rgba(255,255,255,0.6); margin-top: 2px; display: flex; align-items: center; justify-content: center; gap: 4px; }
+        #next-dot { width: 8px; height: 8px; border-radius: 50%; border: 1px solid #fff; box-shadow: 0 0 4px rgba(255,255,255,0.5); }
+        #evolution-guide { display: flex; justify-content: center; align-items: center; background: rgba(255, 255, 255, 0.08); padding: 6px 10px; border-radius: 12px; flex-wrap: wrap; max-width: 50%; border: 1px solid rgba(255,255,255,0.1); }
         .guide-circle { border-radius: 50%; margin: 2px; border: 1px solid #fff; }
         .guide-arrow { color: rgba(255,255,255,0.3); font-size: 8px; margin: 0 1px; }
-        #game-container { width: 95%; max-width: 550px; flex-grow: 1; position: relative; border: 4px solid #4fc3f7; border-top: none; border-radius: 0 0 30px 30px; background: linear-gradient(to bottom, #001a2e, #000b14); box-shadow: 0 5px 30px rgba(0,0,0,0.8); margin-bottom: 15px; overflow: hidden; }
+        #game-container { width: 98%; max-width: 550px; flex-grow: 1; position: relative; border: 3px solid #4fc3f7; border-top: none; border-radius: 0 0 25px 25px; background: linear-gradient(to bottom, #001a2e, #000b14); box-shadow: 0 5px 20px rgba(0,0,0,0.8); margin-bottom: 10px; overflow: hidden; }
         canvas { display: block; width: 100% !important; height: 100% !important; }
-        #game-over { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(255, 255, 255, 0.95); padding: 30px; border-radius: 25px; text-align: center; display: none; z-index: 100; width: 200px; }
-        button { background: #ff4081; border: none; color: white; padding: 10px 25px; border-radius: 50px; font-weight: bold; cursor: pointer; margin-top: 15px; }
+        #game-over { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(255, 255, 255, 0.95); padding: 25px; border-radius: 20px; text-align: center; display: none; z-index: 100; width: 200px; box-shadow: 0 0 30px rgba(0,0,0,0.5); }
+        button { background: #ff4081; border: none; color: white; padding: 10px 20px; border-radius: 40px; font-weight: bold; cursor: pointer; margin-top: 15px; }
     </style>
 </head>
 <body>
@@ -55,8 +55,8 @@ const jellyConfigs = [
     { r: 95, color: '#5e4373', eyeSize: 9.5 }  
 ];
 
-const DEADLINE_Y = 85; 
-const SPAWN_Y = 48;
+const DEADLINE_Y = 55; 
+const SPAWN_Y = 30;
 
 function init() {
     document.getElementById('highscore').innerText = highscore;
@@ -205,12 +205,14 @@ function drawLoop() {
     Events.on(render, 'afterRender', () => {
         const ctx = render.context;
         const bodies = Composite.allBodies(engine.world);
+        
         if (currentJelly && currentJelly.isStatic) {
             ctx.save(); ctx.beginPath(); ctx.setLineDash([6, 6]);
             ctx.moveTo(currentJelly.position.x, currentJelly.position.y + jellyConfigs[currentJelly.level].r);
             ctx.lineTo(currentJelly.position.x, render.canvas.height);
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)'; ctx.lineWidth = 1; ctx.stroke(); ctx.restore();
         }
+        
         bodies.forEach(body => {
             if (!body.label || !body.label.startsWith('jelly_')) return;
             const config = jellyConfigs[body.level];
@@ -236,14 +238,9 @@ function drawLoop() {
         });
         
         ctx.save();
-        ctx.beginPath(); 
-        ctx.setLineDash([10, 10]); 
-        ctx.moveTo(0, DEADLINE_Y);
-        ctx.lineTo(render.canvas.width, DEADLINE_Y); 
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)'; 
-        ctx.lineWidth = 2;
-        ctx.stroke(); 
-        ctx.restore();
+        ctx.beginPath(); ctx.setLineDash([15, 10]); ctx.moveTo(0, DEADLINE_Y);
+        ctx.lineTo(render.canvas.width, DEADLINE_Y); ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)'; ctx.lineWidth = 4;
+        ctx.stroke(); ctx.restore();
     });
 }
 init();
