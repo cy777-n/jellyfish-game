@@ -3,22 +3,106 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>水母合成大作戰</title>
+    <title>水母進化：跨平台穩定版</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
     <style>
-        body { margin: 0; background: #000b14; font-family: 'Arial Rounded MT Bold', sans-serif; overflow: hidden; display: flex; flex-direction: column; align-items: center; height: 100vh; height: -webkit-fill-available; touch-action: none; }
-        #ui-top { width: 100%; max-width: 600px; display: flex; justify-content: space-between; align-items: center; padding: 8px 15px; box-sizing: border-box; z-index: 10; flex-shrink: 0; }
-        .score-box { color: #fff; font-size: 12px; background: rgba(255, 255, 255, 0.1); padding: 4px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); text-align: center; min-width: 70px; backdrop-filter: blur(5px); }
+        body { 
+            margin: 0; 
+            background: #000b14; 
+            font-family: 'Arial Rounded MT Bold', sans-serif; 
+            overflow: hidden; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            height: 100vh; 
+            height: -webkit-fill-available;
+            touch-action: none; 
+            -webkit-user-select: none; 
+        }
+        #ui-top { 
+            width: 100%; 
+            max-width: 600px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            padding: 8px 12px; 
+            box-sizing: border-box; 
+            z-index: 10; 
+            flex-shrink: 0; 
+        }
+        .score-box { 
+            color: #fff; 
+            font-size: 11px; 
+            background: rgba(255, 255, 255, 0.1); 
+            padding: 4px 10px; 
+            border-radius: 8px; 
+            border: 1px solid rgba(255,255,255,0.2); 
+            text-align: center; 
+            min-width: 70px; 
+            backdrop-filter: blur(5px); 
+        }
         .score-box span { display: block; font-size: 16px; font-weight: bold; }
-        .next-hint { font-size: 9px; color: rgba(255,255,255,0.6); margin-top: 2px; display: flex; align-items: center; justify-content: center; gap: 4px; }
-        #next-dot { width: 8px; height: 8px; border-radius: 50%; border: 1px solid #fff; }
-        #evolution-guide { display: flex; justify-content: center; align-items: center; background: rgba(255, 255, 255, 0.08); padding: 6px 10px; border-radius: 12px; flex-wrap: wrap; max-width: 50%; border: 1px solid rgba(255,255,255,0.1); }
+        .next-hint { 
+            font-size: 9px; 
+            color: rgba(255,255,255,0.6); 
+            margin-top: 2px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            gap: 4px; 
+        }
+        #next-dot { width: 9px; height: 9px; border-radius: 50%; border: 1px solid #fff; }
+        #evolution-guide { 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            background: rgba(255, 255, 255, 0.08); 
+            padding: 6px 10px; 
+            border-radius: 12px; 
+            flex-wrap: wrap; 
+            max-width: 50%; 
+            border: 1px solid rgba(255,255,255,0.1); 
+        }
         .guide-circle { border-radius: 50%; margin: 2px; border: 1px solid #fff; }
-        .guide-arrow { color: rgba(255,255,255,0.3); font-size: 8px; }
-        #game-container { width: 98%; max-width: 550px; flex-grow: 1; position: relative; border: 3px solid #4fc3f7; border-top: none; border-radius: 0 0 25px 25px; background: #001a2e; margin-bottom: 10px; overflow: hidden; }
+        .guide-arrow { color: rgba(255,255,255,0.3); font-size: 7px; margin: 0 1px; }
+        #game-container { 
+            width: 96%; 
+            max-width: 500px; 
+            flex-grow: 1; 
+            position: relative; 
+            border: 3px solid #4fc3f7; 
+            border-top: none; 
+            border-radius: 0 0 25px 25px; 
+            background: #001a2e; 
+            margin-bottom: 10px; 
+            overflow: hidden; 
+        }
         canvas { display: block; width: 100% !important; height: 100% !important; }
-        #game-over { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #fff; padding: 25px; border-radius: 20px; text-align: center; display: none; z-index: 100; width: 200px; }
-        button { background: #ff4081; border: none; color: white; padding: 10px 20px; border-radius: 40px; font-weight: bold; cursor: pointer; margin-top: 15px; }
+        #game-over { 
+            position: absolute; 
+            top: 50%; 
+            left: 50%; 
+            transform: translate(-50%, -50%); 
+            background: #fff; 
+            padding: 25px; 
+            border-radius: 20px; 
+            text-align: center; 
+            display: none; 
+            z-index: 100; 
+            width: 180px; 
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+        button { 
+            background: #ff4081; 
+            border: none; 
+            color: white; 
+            padding: 10px 20px; 
+            border-radius: 40px; 
+            font-weight: bold; 
+            cursor: pointer; 
+            margin-top: 15px; 
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
@@ -28,7 +112,7 @@
     <div class="score-box">最高<span id="highscore">0</span><div class="next-hint">NEXT <div id="next-dot"></div></div></div>
 </div>
 <div id="game-container">
-    <div id="game-over"><h2>滿出來了！</h2><p>得分: <span id="final-score">0</span></p><button onclick="location.reload()">重新挑戰</button></div>
+    <div id="game-over"><h2>空間已耗盡</h2><p>得分: <span id="final-score">0</span></p><button onclick="location.reload()">重新挑戰</button></div>
 </div>
 <script>
 const { Engine, Render, Runner, Bodies, Composite, Events, Body } = Matter;
@@ -55,7 +139,7 @@ const jellyConfigs = [
 ];
 
 const DEADLINE_Y = 55; 
-const SPAWN_Y = 30;
+const SPAWN_Y = 32;
 let engine, render, runner, currentJelly = null, nextLevel = 0, score = 0, isGameOver = false;
 let highscore = parseInt(localStorage.getItem("jellyHighscore")) || 0;
 
@@ -68,7 +152,7 @@ function init() {
     engine = Engine.create({ enableSleeping: true });
     render = Render.create({
         element: container, engine: engine,
-        options: { width: cw, height: ch, wireframes: false, background: 'transparent' }
+        options: { width: cw, height: ch, wireframes: false, background: 'transparent', pixelRatio: window.devicePixelRatio }
     });
 
     const ground = Bodies.rectangle(cw/2, ch+20, cw, 40, { isStatic: true });
@@ -92,7 +176,7 @@ function createGuide() {
     jellyConfigs.forEach((c, i) => {
         const dot = document.createElement('div');
         dot.className = 'guide-circle';
-        dot.style.width = (4+i) + 'px'; dot.style.height = (4+i) + 'px';
+        dot.style.width = (3+i) + 'px'; dot.style.height = (3+i) + 'px';
         dot.style.background = c.color;
         guide.appendChild(dot);
         if(i < 10) {
@@ -117,26 +201,42 @@ function spawnNew() {
 
 function setupEvents() {
     const canvas = render.canvas;
-    const move = (clientX) => {
+    const handleMove = (clientX) => {
         if (!currentJelly || isGameOver) return;
         const rect = canvas.getBoundingClientRect();
         const x = clientX - rect.left;
         const r = jellyConfigs[currentJelly.level].r;
         Body.setPosition(currentJelly, { x: Math.max(r, Math.min(canvas.width - r, x)), y: SPAWN_Y });
     };
-    canvas.addEventListener('pointerdown', (e) => {
-        move(e.clientX);
-        mergePool.forEach(s => { s.play(); s.pause(); });
-        dropSound.play(); dropSound.pause();
-    });
-    canvas.addEventListener('pointermove', (e) => move(e.clientX));
-    canvas.addEventListener('pointerup', () => {
+
+    const drop = () => {
         if (!currentJelly || isGameOver) return;
         Body.setStatic(currentJelly, false);
         dropSound.currentTime = 0; dropSound.play().catch(()=>{});
         currentJelly = null;
         setTimeout(spawnNew, 600);
-    });
+    };
+
+    canvas.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        handleMove(e.touches[0].clientX);
+        mergePool.forEach(s => { s.play(); s.pause(); });
+        dropSound.play(); dropSound.pause();
+    }, {passive: false});
+
+    canvas.addEventListener('touchmove', (e) => {
+        e.preventDefault();
+        handleMove(e.touches[0].clientX);
+    }, {passive: false});
+
+    canvas.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        drop();
+    }, {passive: false});
+
+    canvas.addEventListener('mousedown', (e) => handleMove(e.clientX));
+    canvas.addEventListener('mousemove', (e) => { if(e.buttons > 0) handleMove(e.clientX); });
+    canvas.addEventListener('mouseup', drop);
 
     Events.on(engine, 'collisionStart', (event) => {
         event.pairs.forEach(pair => {
