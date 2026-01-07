@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>水母合成大作戰</title>
+    <title>水母進化：清晰邊界版</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
     <style>
         body { margin: 0; background: #000b14; font-family: 'Arial Rounded MT Bold', sans-serif; overflow: hidden; display: flex; flex-direction: column; align-items: center; height: 100vh; height: -webkit-fill-available; touch-action: none; }
         #ui-top { width: 100%; max-width: 600px; display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; box-sizing: border-box; z-index: 10; flex-shrink: 0; }
-        .score-box { color: #fff; font-size: 13px; background: rgba(255, 255, 255, 0.1); padding: 5px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.2); text-align: center; min-width: 75px; backdrop-filter: blur(5px); }
+        .score-box { color: #fff; font-size: 13px; background: rgba(255, 255, 255, 0.1); padding: 5px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.2); text-align: center; min-width: 80px; backdrop-filter: blur(5px); }
         .score-box span { display: block; font-size: 18px; font-weight: bold; }
-        #next-box { color: #fff; font-size: 11px; background: rgba(255, 255, 255, 0.1); padding: 8px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.2); display: flex; flex-direction: column; align-items: center; min-width: 60px; }
-        #next-preview-canvas { width: 40px; height: 40px; margin-top: 5px; }
-        #evolution-guide { display: flex; justify-content: center; align-items: center; background: rgba(255, 255, 255, 0.08); padding: 8px 12px; border-radius: 15px; flex-wrap: wrap; max-width: 45%; border: 1px solid rgba(255,255,255,0.1); }
+        .next-hint { font-size: 10px; color: rgba(255,255,255,0.6); margin-top: 4px; display: flex; align-items: center; justify-content: center; gap: 5px; }
+        #next-dot { width: 10px; height: 10px; border-radius: 50%; border: 1px solid #fff; box-shadow: 0 0 5px rgba(255,255,255,0.3); }
+        #evolution-guide { display: flex; justify-content: center; align-items: center; background: rgba(255, 255, 255, 0.08); padding: 8px 12px; border-radius: 15px; flex-wrap: wrap; max-width: 50%; border: 1px solid rgba(255,255,255,0.1); }
         .guide-circle { border-radius: 50%; margin: 2px; border: 1px solid #fff; }
         .guide-arrow { color: rgba(255,255,255,0.3); font-size: 8px; margin: 0 1px; }
         #game-container { width: 95%; max-width: 550px; flex-grow: 1; position: relative; border: 4px solid #4fc3f7; border-top: none; border-radius: 0 0 30px 30px; background: linear-gradient(to bottom, #001a2e, #000b14); box-shadow: 0 5px 30px rgba(0,0,0,0.8); margin-bottom: 15px; overflow: hidden; }
@@ -24,13 +24,15 @@
 <body>
 <div id="ui-top">
     <div class="score-box">得分<span id="score">0</span></div>
-    <div id="next-box">下一顆<canvas id="next-preview-canvas"></canvas></div>
     <div id="evolution-guide"></div>
-    <div class="score-box">最高<span id="highscore">0</span></div>
+    <div class="score-box">
+        最高<span id="highscore">0</span>
+        <div class="next-hint">NEXT <div id="next-dot"></div></div>
+    </div>
 </div>
 <div id="game-container">
     <div id="game-over">
-        <h2>滿出來啦！</h2>
+        <h2>空間已耗盡</h2>
         <p>得分: <span id="final-score">0</span></p>
         <button onclick="location.reload()">重新挑戰</button>
     </div>
@@ -53,8 +55,8 @@ const jellyConfigs = [
     { r: 95, color: '#5e4373', eyeSize: 9.5 }  
 ];
 
-const DEADLINE_Y = 60; 
-const SPAWN_Y = 35;
+const DEADLINE_Y = 85; 
+const SPAWN_Y = 48;
 
 function init() {
     document.getElementById('highscore').innerText = highscore;
@@ -94,7 +96,7 @@ function createGuide() {
     jellyConfigs.forEach((config, index) => {
         const circle = document.createElement('div');
         circle.className = 'guide-circle';
-        const size = 3 + index * 1.0; 
+        const size = 3 + index * 1.1; 
         circle.style.width = size + 'px'; circle.style.height = size + 'px';
         circle.style.background = config.color;
         guide.appendChild(circle);
@@ -104,17 +106,6 @@ function createGuide() {
             guide.appendChild(arrow);
         }
     });
-}
-
-function updateNextPreview() {
-    const canvas = document.getElementById('next-preview-canvas');
-    const ctx = canvas.getContext('2d');
-    const config = jellyConfigs[nextLevel];
-    canvas.width = 40; canvas.height = 40;
-    ctx.clearRect(0, 0, 40, 40);
-    ctx.beginPath(); ctx.arc(20, 20, Math.min(15, config.r), 0, Math.PI * 2);
-    ctx.fillStyle = config.color; ctx.fill();
-    ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
 }
 
 function spawnNew() {
@@ -127,7 +118,7 @@ function spawnNew() {
     currentJelly.level = level;
     Composite.add(engine.world, currentJelly);
     nextLevel = getRandomLevel();
-    updateNextPreview();
+    document.getElementById('next-dot').style.background = jellyConfigs[nextLevel].color;
 }
 
 function setupEvents() {
@@ -227,7 +218,7 @@ function drawLoop() {
             const r = config.r;
             ctx.save(); ctx.translate(x, y); ctx.rotate(body.angle);
             ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2);
-            ctx.fillStyle = config.color; ctx.globalAlpha = 1.0; ctx.fill();
+            ctx.fillStyle = config.color; ctx.fill();
             ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 2; ctx.stroke();
             ctx.beginPath(); ctx.fillStyle = PINK_BLUSH;
             ctx.arc(-r*0.4, r*0.1, r*0.18, 0, Math.PI*2); ctx.arc(r*0.4, r*0.1, r*0.18, 0, Math.PI*2); ctx.fill();
@@ -243,8 +234,16 @@ function drawLoop() {
             }
             ctx.fill(); ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 1; ctx.stroke(); ctx.restore();
         });
-        ctx.beginPath(); ctx.setLineDash([5, 10]); ctx.moveTo(0, DEADLINE_Y);
-        ctx.lineTo(render.canvas.width, DEADLINE_Y); ctx.strokeStyle = 'rgba(255, 0, 0, 0.3)'; ctx.stroke(); ctx.setLineDash([]);
+        
+        ctx.save();
+        ctx.beginPath(); 
+        ctx.setLineDash([10, 10]); 
+        ctx.moveTo(0, DEADLINE_Y);
+        ctx.lineTo(render.canvas.width, DEADLINE_Y); 
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)'; 
+        ctx.lineWidth = 2;
+        ctx.stroke(); 
+        ctx.restore();
     });
 }
 init();
