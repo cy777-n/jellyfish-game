@@ -33,13 +33,23 @@
 <script>
 const { Engine, Render, Runner, Bodies, Composite, Events, Body } = Matter;
 
-const mergeSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2020/2020-preview.mp3');
-const dropSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2004/2004-preview.mp3');
+const MERGE_SRC = 'https://assets.mixkit.co/active_storage/sfx/2020/2020-preview.mp3';
+const DROP_SRC = 'https://assets.mixkit.co/active_storage/sfx/2004/2004-preview.mp3';
 
-function playAudio(audioObj) {
-    audioObj.pause();
-    audioObj.currentTime = 0;
-    audioObj.play().catch(() => {});
+const mergePool = [new Audio(MERGE_SRC), new Audio(MERGE_SRC), new Audio(MERGE_SRC)];
+let mergeIdx = 0;
+const dropSound = new Audio(DROP_SRC);
+
+function playMerge() {
+    const sound = mergePool[mergeIdx];
+    sound.currentTime = 0;
+    sound.play().catch(() => {});
+    mergeIdx = (mergeIdx + 1) % mergePool.length;
+}
+
+function playDrop() {
+    dropSound.currentTime = 0;
+    dropSound.play().catch(() => {});
 }
 
 let engine, render, runner, currentJelly = null, nextLevel = null;
@@ -144,8 +154,8 @@ function setupEvents() {
         isTouching = true;
         const x = e.touches ? e.touches[0].clientX : e.clientX;
         updatePos(x);
-        mergeSound.play().then(() => mergeSound.pause()).catch(() => {});
-        dropSound.play().then(() => dropSound.pause()).catch(() => {});
+        mergePool.forEach(s => { s.play(); s.pause(); });
+        dropSound.play(); dropSound.pause();
     };
     const handleMove = (e) => {
         if (isTouching) {
@@ -157,7 +167,7 @@ function setupEvents() {
         if (!currentJelly || isGameOver || !isTouching) return;
         isTouching = false;
         Body.setStatic(currentJelly, false);
-        playAudio(dropSound);
+        playDrop();
         currentJelly = null;
         setTimeout(spawnNew, 800);
     };
@@ -178,7 +188,7 @@ function setupEvents() {
                     const midY = (bodyA.position.y + bodyB.position.y) / 2;
                     if (Composite.get(engine.world, bodyA.id, 'body') && Composite.get(engine.world, bodyB.id, 'body')) {
                         Composite.remove(engine.world, [bodyA, bodyB]);
-                        playAudio(mergeSound);
+                        playMerge();
                         const nextLvl = lvl + 1;
                         const newJelly = Bodies.circle(midX, midY, jellyConfigs[nextLvl].r, {
                             label: 'jelly_' + nextLvl, restitution: 0.1, friction: 0.9
@@ -217,14 +227,11 @@ function drawLoop() {
         const bodies = Composite.allBodies(engine.world);
         if (currentJelly && currentJelly.isStatic) {
             ctx.save();
-            ctx.beginPath();
-            ctx.setLineDash([6, 6]);
+            ctx.beginPath(); ctx.setLineDash([6, 6]);
             ctx.moveTo(currentJelly.position.x, currentJelly.position.y + jellyConfigs[currentJelly.level].r);
             ctx.lineTo(currentJelly.position.x, render.canvas.height);
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
-            ctx.lineWidth = 1;
-            ctx.stroke();
-            ctx.restore();
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)'; ctx.lineWidth = 1;
+            ctx.stroke(); ctx.restore();
         }
 
         bodies.forEach(body => {
@@ -252,14 +259,9 @@ function drawLoop() {
         });
         
         ctx.save();
-        ctx.beginPath(); 
-        ctx.setLineDash([15, 10]); 
-        ctx.moveTo(0, DEADLINE_Y);
-        ctx.lineTo(render.canvas.width, DEADLINE_Y); 
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)'; 
-        ctx.lineWidth = 4;
-        ctx.stroke(); 
-        ctx.restore();
+        ctx.beginPath(); ctx.setLineDash([15, 10]); ctx.moveTo(0, DEADLINE_Y);
+        ctx.lineTo(render.canvas.width, DEADLINE_Y); ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)'; ctx.lineWidth = 4;
+        ctx.stroke(); ctx.restore();
     });
 }
 init();
