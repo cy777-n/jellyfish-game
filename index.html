@@ -41,12 +41,17 @@ let score = 0, isGameOver = false, isTouching = false;
 let highscore = parseInt(localStorage.getItem("jellyHighscore")) || 0;
 
 const jellyConfigs = [
-    { r: 12, color: '#FFB7C5', eyeSize: 1.5 }, { r: 18, color: '#C1E7E3', eyeSize: 2.0 }, 
-    { r: 25, color: '#B2E2A2', eyeSize: 2.5 }, { r: 35, color: '#FDFD96', eyeSize: 3.2 }, 
-    { r: 50, color: '#FFD1DC', eyeSize: 4.5 }, { r: 68, color: '#C3B1E1', eyeSize: 5.5 }, 
-    { r: 88, color: '#FFB347', eyeSize: 7.0 }, { r: 108, color: '#AEC6CF', eyeSize: 8.5 }, 
-    { r: 125, color: '#DEA5A4', eyeSize: 10.0 }, { r: 140, color: '#CB99C9', eyeSize: 11.5 }, 
-    { r: 155, color: '#FF6961', eyeSize: 13.0 } 
+    { r: 12, color: '#FFB7C5', eyeSize: 1.5 }, 
+    { r: 18, color: '#C1E7E3', eyeSize: 2.0 }, 
+    { r: 25, color: '#B2E2A2', eyeSize: 2.5 }, 
+    { r: 35, color: '#FDFD96', eyeSize: 3.2 }, 
+    { r: 48, color: '#FFD1DC', eyeSize: 4.5 }, 
+    { r: 62, color: '#C3B1E1', eyeSize: 5.5 }, 
+    { r: 78, color: '#FFB347', eyeSize: 6.5 }, 
+    { r: 92, color: '#AEC6CF', eyeSize: 7.5 }, 
+    { r: 105, color: '#DEA5A4', eyeSize: 8.5 }, 
+    { r: 118, color: '#CB99C9', eyeSize: 9.5 }, 
+    { r: 130, color: '#FF6961', eyeSize: 11.0 } 
 ];
 
 const DEADLINE_Y = 100;
@@ -79,7 +84,7 @@ function createGuide() {
     jellyConfigs.forEach((config, index) => {
         const circle = document.createElement('div');
         circle.className = 'guide-circle';
-        const size = 3.5 + index * 1.3; 
+        const size = 3 + index * 1.2; 
         circle.style.width = size + 'px'; circle.style.height = size + 'px';
         circle.style.background = config.color;
         guide.appendChild(circle);
