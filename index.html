@@ -41,20 +41,16 @@ let score = 0, isGameOver = false, isTouching = false;
 let highscore = parseInt(localStorage.getItem("jellyHighscore")) || 0;
 
 const jellyConfigs = [
-    { r: 8, color: '#FFB7C5', eyeSize: 1.0 }, 
-    { r: 15, color: '#C1E7E3', eyeSize: 1.5 }, 
-    { r: 23, color: '#B2E2A2', eyeSize: 2.0 }, 
-    { r: 32, color: '#FDFD96', eyeSize: 2.8 }, 
-    { r: 42, color: '#FFD1DC', eyeSize: 3.5 }, 
-    { r: 52, color: '#C3B1E1', eyeSize: 4.5 }, 
-    { r: 60, color: '#FFB347', eyeSize: 5.5 }, 
-    { r: 68, color: '#AEC6CF', eyeSize: 6.5 }, 
-    { r: 76, color: '#DEA5A4', eyeSize: 7.5 }, 
-    { r: 84, color: '#CB99C9', eyeSize: 8.5 }, 
+    { r: 8, color: '#FFB7C5', eyeSize: 1.0 }, { r: 15, color: '#C1E7E3', eyeSize: 1.5 }, 
+    { r: 23, color: '#B2E2A2', eyeSize: 2.0 }, { r: 32, color: '#FDFD96', eyeSize: 2.8 }, 
+    { r: 42, color: '#FFD1DC', eyeSize: 3.5 }, { r: 52, color: '#C3B1E1', eyeSize: 4.5 }, 
+    { r: 60, color: '#FFB347', eyeSize: 5.5 }, { r: 68, color: '#AEC6CF', eyeSize: 6.5 }, 
+    { r: 76, color: '#DEA5A4', eyeSize: 7.5 }, { r: 84, color: '#CB99C9', eyeSize: 8.5 }, 
     { r: 92, color: '#FF6961', eyeSize: 9.5 } 
 ];
 
 const DEADLINE_Y = 100;
+const SPAWN_Y = 55;
 
 function init() {
     document.getElementById('highscore').innerText = highscore;
@@ -113,7 +109,7 @@ function spawnNew() {
     else if (rand < 0.92) { level = 2; } 
     else { level = 3; }
     const cw = render.canvas.width;
-    currentJelly = Bodies.circle(cw/2, 45, jellyConfigs[level].r, {
+    currentJelly = Bodies.circle(cw/2, SPAWN_Y, jellyConfigs[level].r, {
         isStatic: true, label: 'jelly_' + level, restitution: 0.1, friction: 0.9
     });
     currentJelly.level = level;
@@ -127,7 +123,7 @@ function setupEvents() {
         const x = clientX - rect.left;
         const r = jellyConfigs[currentJelly.level].r;
         const cw = canvas.width;
-        Body.setPosition(currentJelly, { x: Math.max(r, Math.min(cw - r, x)), y: 45 });
+        Body.setPosition(currentJelly, { x: Math.max(r, Math.min(cw - r, x)), y: SPAWN_Y });
     };
     const handleStart = (e) => {
         if (isGameOver) return;
@@ -194,14 +190,27 @@ function drawLoop() {
     Events.on(render, 'afterRender', () => {
         const ctx = render.context;
         const bodies = Composite.allBodies(engine.world);
+        
+        if (currentJelly && currentJelly.isStatic) {
+            ctx.save();
+            ctx.beginPath();
+            ctx.setLineDash([6, 6]);
+            ctx.moveTo(currentJelly.position.x, currentJelly.position.y + jellyConfigs[currentJelly.level].r);
+            ctx.lineTo(currentJelly.position.x, render.canvas.height);
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            ctx.restore();
+        }
+
         bodies.forEach(body => {
-            if (body.isStatic || !body.label.startsWith('jelly_')) return;
+            if (!body.label || !body.label.startsWith('jelly_')) return;
             const config = jellyConfigs[body.level];
             const { x, y } = body.position;
             const r = config.r;
             ctx.save(); ctx.translate(x, y); ctx.rotate(body.angle);
             ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2);
-            ctx.fillStyle = config.color; ctx.globalAlpha = 0.85; ctx.fill();
+            ctx.fillStyle = config.color; ctx.globalAlpha = body.isStatic ? 0.95 : 0.85; ctx.fill();
             ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 2; ctx.globalAlpha = 1; ctx.stroke();
             ctx.beginPath(); ctx.fillStyle = '#FFC0CB'; ctx.globalAlpha = 0.3;
             ctx.arc(-r*0.4, r*0.1, r*0.18, 0, Math.PI*2); ctx.arc(r*0.4, r*0.1, r*0.18, 0, Math.PI*2); ctx.fill();
@@ -217,6 +226,7 @@ function drawLoop() {
             }
             ctx.fill(); ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 1; ctx.stroke(); ctx.restore();
         });
+        
         ctx.beginPath(); ctx.setLineDash([5, 10]); ctx.moveTo(0, DEADLINE_Y);
         ctx.lineTo(render.canvas.width, DEADLINE_Y); ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)'; ctx.stroke(); ctx.setLineDash([]);
     });
