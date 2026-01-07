@@ -7,101 +7,40 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
     <style>
         body { 
-            margin: 0; 
-            background: #000b14; 
-            font-family: 'Arial Rounded MT Bold', sans-serif; 
-            overflow: hidden; 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            height: 100vh; 
-            height: -webkit-fill-available;
-            touch-action: none; 
-            -webkit-user-select: none; 
+            margin: 0; background: #000b14; overflow: hidden; 
+            display: flex; flex-direction: column; align-items: center; 
+            height: 100vh; height: -webkit-fill-available; touch-action: none;
+            font-family: sans-serif;
         }
         #ui-top { 
-            width: 100%; 
-            max-width: 600px; 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            padding: 8px 12px; 
-            box-sizing: border-box; 
-            z-index: 10; 
-            flex-shrink: 0; 
+            width: 100%; max-width: 500px; display: flex; 
+            justify-content: space-between; align-items: center; 
+            padding: 10px; box-sizing: border-box; flex-shrink: 0;
         }
         .score-box { 
-            color: #fff; 
-            font-size: 11px; 
-            background: rgba(255, 255, 255, 0.1); 
-            padding: 4px 10px; 
-            border-radius: 8px; 
-            border: 1px solid rgba(255,255,255,0.2); 
-            text-align: center; 
-            min-width: 70px; 
-            backdrop-filter: blur(5px); 
+            color: #fff; background: rgba(255, 255, 255, 0.1); 
+            padding: 5px 10px; border-radius: 8px; text-align: center; min-width: 60px;
         }
         .score-box span { display: block; font-size: 16px; font-weight: bold; }
-        .next-hint { 
-            font-size: 9px; 
-            color: rgba(255,255,255,0.6); 
-            margin-top: 2px; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            gap: 4px; 
-        }
-        #next-dot { width: 9px; height: 9px; border-radius: 50%; border: 1px solid #fff; }
         #evolution-guide { 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            background: rgba(255, 255, 255, 0.08); 
-            padding: 6px 10px; 
-            border-radius: 12px; 
-            flex-wrap: wrap; 
-            max-width: 50%; 
-            border: 1px solid rgba(255,255,255,0.1); 
+            display: flex; align-items: center; gap: 2px;
+            background: rgba(255, 255, 255, 0.05); padding: 5px; border-radius: 10px;
         }
-        .guide-circle { border-radius: 50%; margin: 2px; border: 1px solid #fff; }
-        .guide-arrow { color: rgba(255,255,255,0.3); font-size: 7px; margin: 0 1px; }
+        .guide-dot { border-radius: 50%; border: 1px solid #fff; }
         #game-container { 
-            width: 96%; 
-            max-width: 500px; 
-            flex-grow: 1; 
-            position: relative; 
-            border: 3px solid #4fc3f7; 
-            border-top: none; 
-            border-radius: 0 0 25px 25px; 
-            background: #001a2e; 
-            margin-bottom: 10px; 
-            overflow: hidden; 
+            width: 95%; max-width: 500px; flex-grow: 1; position: relative;
+            border: 3px solid #4fc3f7; border-top: none; border-radius: 0 0 20px 20px;
+            background: #001a2e; margin-bottom: 10px; overflow: hidden;
         }
-        canvas { display: block; width: 100% !important; height: 100% !important; }
+        canvas { display: block; width: 100%; height: 100%; }
         #game-over { 
-            position: absolute; 
-            top: 50%; 
-            left: 50%; 
-            transform: translate(-50%, -50%); 
-            background: #fff; 
-            padding: 25px; 
-            border-radius: 20px; 
-            text-align: center; 
-            display: none; 
-            z-index: 100; 
-            width: 180px; 
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: #fff; padding: 20px; border-radius: 15px; text-align: center;
+            display: none; z-index: 100; width: 200px;
         }
         button { 
-            background: #ff4081; 
-            border: none; 
-            color: white; 
-            padding: 10px 20px; 
-            border-radius: 40px; 
-            font-weight: bold; 
-            cursor: pointer; 
-            margin-top: 15px; 
-            font-size: 14px;
+            background: #ff4081; border: none; color: white; padding: 10px 20px;
+            border-radius: 20px; font-weight: bold; margin-top: 10px;
         }
     </style>
 </head>
@@ -109,56 +48,61 @@
 <div id="ui-top">
     <div class="score-box">得分<span id="score">0</span></div>
     <div id="evolution-guide"></div>
-    <div class="score-box">最高<span id="highscore">0</span><div class="next-hint">NEXT <div id="next-dot"></div></div></div>
+    <div class="score-box">最高<span id="highscore">0</span></div>
 </div>
 <div id="game-container">
-    <div id="game-over"><h2>滿出來了！</h2><p>得分: <span id="final-score">0</span></p><button onclick="location.reload()">重新挑戰</button></div>
+    <div id="game-over">
+        <h2>滿出來了！</h2>
+        <p>得分: <span id="final-score">0</span></p>
+        <button onclick="location.reload()">重新挑戰</button>
+    </div>
 </div>
+
 <script>
 const { Engine, Render, Runner, Bodies, Composite, Events, Body } = Matter;
 
 const MERGE_SRC = 'https://assets.mixkit.co/active_storage/sfx/2020/2020-preview.mp3';
 const DROP_SRC = 'https://assets.mixkit.co/active_storage/sfx/2004/2004-preview.mp3';
-const mergePool = [new Audio(MERGE_SRC), new Audio(MERGE_SRC)];
+const mergeSounds = [new Audio(MERGE_SRC), new Audio(MERGE_SRC), new Audio(MERGE_SRC)];
 let mIdx = 0;
 const dropSound = new Audio(DROP_SRC);
 
-function playM() {
-    const s = mergePool[mIdx];
+function playMerge() {
+    const s = mergeSounds[mIdx];
     s.currentTime = 0; s.play().catch(()=>{});
-    mIdx = (mIdx + 1) % mergePool.length;
+    mIdx = (mIdx + 1) % mergeSounds.length;
 }
 
 const jellyConfigs = [
-    { r: 8, color: '#fcf0f5', eyeSize: 1.0 }, { r: 15, color: '#f9de90', eyeSize: 1.5 }, 
-    { r: 23, color: '#f8c6a1', eyeSize: 2.0 }, { r: 32, color: '#dca8c2', eyeSize: 2.8 }, 
-    { r: 42, color: '#ba9fe1', eyeSize: 3.5 }, { r: 52, color: '#a0d4cd', eyeSize: 4.5 }, 
-    { r: 62, color: '#87b8e5', eyeSize: 5.5 }, { r: 72, color: '#c57ca1', eyeSize: 6.5 }, 
-    { r: 82, color: '#6fb5cf', eyeSize: 7.5 }, { r: 88, color: '#3071a4', eyeSize: 8.5 }, 
-    { r: 95, color: '#5e4373', eyeSize: 9.5 }  
+    { r: 10, color: '#fcf0f5' }, { r: 16, color: '#f9de90' }, 
+    { r: 24, color: '#f8c6a1' }, { r: 32, color: '#dca8c2' }, 
+    { r: 42, color: '#ba9fe1' }, { r: 52, color: '#a0d4cd' }, 
+    { r: 62, color: '#87b8e5' }, { r: 72, color: '#c57ca1' }, 
+    { r: 82, color: '#6fb5cf' }, { r: 88, color: '#3071a4' }, 
+    { r: 95, color: '#5e4373' }
 ];
 
-const DEADLINE_Y = 55; 
-const SPAWN_Y = 32;
-let engine, render, runner, currentJelly = null, nextLevel = 0, score = 0, isGameOver = false;
-let highscore = parseInt(localStorage.getItem("jellyHighscore")) || 0;
+const DEADLINE_Y = 55;
+const SPAWN_Y = 30;
+let engine, render, runner, currentJelly = null, nextLevel = 0;
+let score = 0, highscore = localStorage.getItem("jellyHigh") || 0, isGameOver = false;
 
 function init() {
     document.getElementById('highscore').innerText = highscore;
     const container = document.getElementById('game-container');
-    const cw = container.clientWidth;
-    const ch = container.clientHeight;
     
-    engine = Engine.create({ enableSleeping: true });
+    engine = Engine.create({ enableSleeping: false });
     render = Render.create({
         element: container, engine: engine,
-        options: { width: cw, height: ch, wireframes: false, background: 'transparent', pixelRatio: window.devicePixelRatio }
+        options: { width: container.clientWidth, height: container.clientHeight, wireframes: false, background: 'transparent' }
     });
 
+    const cw = container.clientWidth;
+    const ch = container.clientHeight;
     const ground = Bodies.rectangle(cw/2, ch+20, cw, 40, { isStatic: true });
-    const lw = Bodies.rectangle(-20, ch/2, 40, ch, { isStatic: true });
-    const rw = Bodies.rectangle(cw+20, ch/2, 40, ch, { isStatic: true });
-    Composite.add(engine.world, [ground, lw, rw]);
+    const wallL = Bodies.rectangle(-20, ch/2, 40, ch, { isStatic: true });
+    const wallR = Bodies.rectangle(cw+20, ch/2, 40, ch, { isStatic: true });
+    Composite.add(engine.world, [ground, wallL, wallR]);
 
     Render.run(render);
     runner = Runner.create();
@@ -167,23 +111,18 @@ function init() {
     createGuide();
     nextLevel = Math.floor(Math.random() * 3);
     spawnNew();
-    setupEvents();
-    drawLoop();
+    bindEvents();
+    renderLoop();
 }
 
 function createGuide() {
     const guide = document.getElementById('evolution-guide');
     jellyConfigs.forEach((c, i) => {
-        const dot = document.createElement('div');
-        dot.className = 'guide-circle';
-        dot.style.width = (3+i) + 'px'; dot.style.height = (3+i) + 'px';
-        dot.style.background = c.color;
-        guide.appendChild(dot);
-        if(i < 10) {
-            const a = document.createElement('div');
-            a.className = 'guide-arrow'; a.innerText = '›';
-            guide.appendChild(a);
-        }
+        const d = document.createElement('div');
+        d.className = 'guide-dot';
+        d.style.width = (4+i) + 'px'; d.style.height = (4+i) + 'px';
+        d.style.background = c.color;
+        guide.appendChild(d);
     });
 }
 
@@ -191,123 +130,126 @@ function spawnNew() {
     if (isGameOver) return;
     const cw = render.canvas.width;
     currentJelly = Bodies.circle(cw/2, SPAWN_Y, jellyConfigs[nextLevel].r, {
-        isStatic: true, label: 'j_' + nextLevel
+        isStatic: true, label: 'j_' + nextLevel, level: nextLevel
     });
-    currentJelly.level = nextLevel;
     Composite.add(engine.world, currentJelly);
     nextLevel = Math.floor(Math.random() * 3);
-    document.getElementById('next-dot').style.background = jellyConfigs[nextLevel].color;
 }
 
-function setupEvents() {
+function bindEvents() {
     const canvas = render.canvas;
-    const handleMove = (clientX) => {
-        if (!currentJelly || isGameOver) return;
+    const getX = (e) => {
         const rect = canvas.getBoundingClientRect();
-        const x = clientX - rect.left;
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        return clientX - rect.left;
+    };
+    const move = (e) => {
+        if (!currentJelly || isGameOver) return;
+        const x = getX(e);
         const r = jellyConfigs[currentJelly.level].r;
         Body.setPosition(currentJelly, { x: Math.max(r, Math.min(canvas.width - r, x)), y: SPAWN_Y });
     };
-
-    const drop = () => {
+    const release = () => {
         if (!currentJelly || isGameOver) return;
         Body.setStatic(currentJelly, false);
-        dropSound.currentTime = 0; dropSound.play().catch(()=>{});
         currentJelly = null;
-        setTimeout(spawnNew, 600);
+        dropSound.currentTime = 0; dropSound.play().catch(()=>{});
+        setTimeout(spawnNew, 700);
     };
 
-    canvas.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        handleMove(e.touches[0].clientX);
-        mergePool.forEach(s => { s.play(); s.pause(); });
-        dropSound.play(); dropSound.pause();
-    }, {passive: false});
-
-    canvas.addEventListener('touchmove', (e) => {
-        e.preventDefault();
-        handleMove(e.touches[0].clientX);
-    }, {passive: false});
-
-    canvas.addEventListener('touchend', (e) => {
-        e.preventDefault();
-        drop();
-    }, {passive: false});
-
-    canvas.addEventListener('mousedown', (e) => handleMove(e.clientX));
-    canvas.addEventListener('mousemove', (e) => { if(e.buttons > 0) handleMove(e.clientX); });
-    canvas.addEventListener('mouseup', drop);
+    canvas.addEventListener('touchstart', (e) => { e.preventDefault(); move(e); }, {passive: false});
+    canvas.addEventListener('touchmove', (e) => { e.preventDefault(); move(e); }, {passive: false});
+    canvas.addEventListener('touchend', (e) => { e.preventDefault(); release(); }, {passive: false});
+    canvas.addEventListener('mousedown', move);
+    canvas.addEventListener('mousemove', (e) => { if(e.buttons > 0) move(e); });
+    canvas.addEventListener('mouseup', release);
 
     Events.on(engine, 'collisionStart', (event) => {
         event.pairs.forEach(pair => {
             const { bodyA, bodyB } = pair;
-            if (bodyA.label && bodyA.label === bodyB.label && bodyA.label.startsWith('j_')) {
+            if (bodyA.label === bodyB.label && bodyA.label && bodyA.label.startsWith('j_')) {
                 const lvl = bodyA.level;
-                if (lvl < 10 && Composite.get(engine.world, bodyA.id, 'body')) {
+                if (lvl < 10) {
                     const nextL = lvl + 1;
-                    const newJ = Bodies.circle((bodyA.position.x + bodyB.position.x)/2, (bodyA.position.y + bodyB.position.y)/2, jellyConfigs[nextL].r, {
-                        label: 'j_' + nextL
-                    });
-                    newJ.level = nextL;
+                    const newX = (bodyA.position.x + bodyB.position.x) / 2;
+                    const newY = (bodyA.position.y + bodyB.position.y) / 2;
                     Composite.remove(engine.world, [bodyA, bodyB]);
+                    const newJ = Bodies.circle(newX, newY, jellyConfigs[nextL].r, {
+                        label: 'j_' + nextL, level: nextL
+                    });
                     Composite.add(engine.world, newJ);
-                    playM();
-                    score += (lvl + 1) * 8;
+                    playMerge();
+                    score += (lvl + 1) * 10;
                     document.getElementById('score').innerText = score;
                     if (score > highscore) {
                         highscore = score;
                         document.getElementById('highscore').innerText = highscore;
-                        localStorage.setItem("jellyHighscore", highscore);
+                        localStorage.setItem("jellyHigh", highscore);
                     }
                 }
             }
         });
     });
-
-    Events.on(engine, 'afterUpdate', () => {
-        Composite.allBodies(engine.world).forEach(b => {
-            if (!b.isStatic && b.position.y < DEADLINE_Y && b !== currentJelly && Math.abs(b.velocity.y) < 0.1) {
-                isGameOver = true;
-                document.getElementById('game-over').style.display = 'block';
-                document.getElementById('final-score').innerText = score;
-            }
-        });
-    });
 }
 
-function drawLoop() {
+function renderLoop() {
     Events.on(render, 'afterRender', () => {
         const ctx = render.context;
         const bodies = Composite.allBodies(engine.world);
+
         if (currentJelly) {
             ctx.beginPath(); ctx.setLineDash([5, 5]);
             ctx.moveTo(currentJelly.position.x, currentJelly.position.y);
             ctx.lineTo(currentJelly.position.x, render.canvas.height);
             ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.stroke();
+            ctx.setLineDash([]);
         }
+
         bodies.forEach(b => {
             if (!b.label || !b.label.startsWith('j_')) return;
-            const c = jellyConfigs[b.level];
-            const r = c.r;
-            ctx.save(); ctx.translate(b.position.x, b.position.y); ctx.rotate(b.angle);
-            ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI*2);
-            ctx.fillStyle = c.color; ctx.fill();
+            const lvl = b.level;
+            const r = jellyConfigs[lvl].r;
+            ctx.save();
+            ctx.translate(b.position.x, b.position.y);
+            ctx.rotate(b.angle);
+
+            ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2);
+            ctx.fillStyle = jellyConfigs[lvl].color; ctx.fill();
             ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+
             ctx.fillStyle = '#FFB6C1';
-            ctx.beginPath(); ctx.arc(-r*0.4, r*0.1, r*0.18, 0, Math.PI*2); ctx.arc(r*0.4, r*0.1, r*0.18, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(-r*0.4, r*0.1, r*0.15, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(r*0.4, r*0.1, r*0.15, 0, Math.PI*2); ctx.fill();
+
             ctx.fillStyle = '#212121';
-            ctx.beginPath(); ctx.arc(-r*0.28, -r*0.1, c.eyeSize, 0, Math.PI*2); ctx.arc(r*0.28, -r*0.1, c.eyeSize, 0, Math.PI*2); ctx.fill();
-            ctx.beginPath(); ctx.arc(0, r*0.15, r*0.12, 0.2, Math.PI-0.2); ctx.strokeStyle='#212121'; ctx.stroke();
-            ctx.beginPath(); ctx.fillStyle = c.color;
-            for(let i=0; i<5; i++){
-                const step = (r*2)/5; ctx.arc(-r+(i*step)+step/2, r*0.8, step/2, 0, Math.PI);
+            const eyeSize = Math.max(1, r * 0.08);
+            ctx.beginPath(); ctx.arc(-r*0.25, -r*0.1, eyeSize, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(r*0.25, -r*0.1, eyeSize, 0, Math.PI*2); ctx.fill();
+
+            ctx.beginPath(); ctx.arc(0, r*0.1, r*0.1, 0.2, Math.PI - 0.2);
+            ctx.strokeStyle = '#212121'; ctx.lineWidth = 1.5; ctx.stroke();
+
+            ctx.beginPath(); ctx.fillStyle = jellyConfigs[lvl].color;
+            for(let i=0; i<5; i++) {
+                const step = (r * 2) / 5;
+                ctx.arc(-r + (i * step) + step/2, r * 0.85, step/2, 0, Math.PI);
             }
-            ctx.fill(); ctx.stroke(); ctx.restore();
+            ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.stroke();
+
+            ctx.restore();
+
+            if (!b.isStatic && b.position.y < DEADLINE_Y && Math.abs(b.velocity.y) < 0.1) {
+                isGameOver = true;
+                document.getElementById('game-over').style.display = 'block';
+                document.getElementById('final-score').innerText = score;
+            }
         });
-        ctx.beginPath(); ctx.setLineDash([10, 10]); ctx.moveTo(0, DEADLINE_Y); ctx.lineTo(render.canvas.width, DEADLINE_Y);
-        ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 3; ctx.stroke(); ctx.setLineDash([]);
+
+        ctx.beginPath(); ctx.setLineDash([10, 5]); ctx.moveTo(0, DEADLINE_Y); ctx.lineTo(render.canvas.width, DEADLINE_Y);
+        ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 2; ctx.stroke();
     });
 }
+
 init();
 </script>
 </body>
