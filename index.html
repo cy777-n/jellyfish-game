@@ -17,7 +17,7 @@
         .guide-arrow { color: rgba(255,255,255,0.3); font-size: 8px; margin: 0 1px; }
         #game-container { width: 98%; max-width: 550px; flex-grow: 1; position: relative; border: 3px solid #4fc3f7; border-top: none; border-radius: 0 0 25px 25px; background: linear-gradient(to bottom, #001a2e, #000b14); box-shadow: 0 5px 20px rgba(0,0,0,0.8); margin-bottom: 10px; overflow: hidden; }
         canvas { display: block; width: 100% !important; height: 100% !important; }
-        #game-over { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(255, 255, 255, 0.95); padding: 25px; border-radius: 20px; text-align: center; display: none; z-index: 100; width: 200px; box-shadow: 0 0 30px rgba(0,0,0,0.5); }
+        #game-over { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(255, 255, 255, 0.95); padding: 25px; border-radius: 20px; text-align: center; display: none; z-index: 100; width: 200px; }
         button { background: #ff4081; border: none; color: white; padding: 10px 20px; border-radius: 40px; font-weight: bold; cursor: pointer; margin-top: 15px; }
     </style>
 </head>
@@ -25,17 +25,10 @@
 <div id="ui-top">
     <div class="score-box">得分<span id="score">0</span></div>
     <div id="evolution-guide"></div>
-    <div class="score-box">
-        最高<span id="highscore">0</span>
-        <div class="next-hint">NEXT <div id="next-dot"></div></div>
-    </div>
+    <div class="score-box">最高<span id="highscore">0</span><div class="next-hint">NEXT <div id="next-dot"></div></div></div>
 </div>
 <div id="game-container">
-    <div id="game-over">
-        <h2>滿出來啦！</h2>
-        <p>得分: <span id="final-score">0</span></p>
-        <button onclick="location.reload()">重新挑戰</button>
-    </div>
+    <div id="game-over"><h2>滿出來了！</h2><p>得分: <span id="final-score">0</span></p><button onclick="location.reload()">重新挑戰</button></div>
 </div>
 <script>
 const { Engine, Render, Runner, Bodies, Composite, Events, Body } = Matter;
@@ -80,6 +73,13 @@ function init() {
     spawnNew();
     setupEvents();
     drawLoop();
+    window.addEventListener('resize', () => {
+        const cw = container.clientWidth;
+        const ch = container.clientHeight;
+        render.canvas.width = cw;
+        render.canvas.height = ch;
+        Body.setPosition(ground, { x: cw/2, y: ch + 20 });
+    });
 }
 
 function getRandomLevel() {
@@ -207,12 +207,17 @@ function drawLoop() {
         const bodies = Composite.allBodies(engine.world);
         
         if (currentJelly && currentJelly.isStatic) {
-            ctx.save(); ctx.beginPath(); ctx.setLineDash([6, 6]);
+            ctx.save();
+            ctx.beginPath();
+            ctx.setLineDash([6, 6]);
             ctx.moveTo(currentJelly.position.x, currentJelly.position.y + jellyConfigs[currentJelly.level].r);
             ctx.lineTo(currentJelly.position.x, render.canvas.height);
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)'; ctx.lineWidth = 1; ctx.stroke(); ctx.restore();
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            ctx.restore();
         }
-        
+
         bodies.forEach(body => {
             if (!body.label || !body.label.startsWith('jelly_')) return;
             const config = jellyConfigs[body.level];
@@ -238,9 +243,14 @@ function drawLoop() {
         });
         
         ctx.save();
-        ctx.beginPath(); ctx.setLineDash([15, 10]); ctx.moveTo(0, DEADLINE_Y);
-        ctx.lineTo(render.canvas.width, DEADLINE_Y); ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)'; ctx.lineWidth = 4;
-        ctx.stroke(); ctx.restore();
+        ctx.beginPath(); 
+        ctx.setLineDash([15, 10]); 
+        ctx.moveTo(0, DEADLINE_Y);
+        ctx.lineTo(render.canvas.width, DEADLINE_Y); 
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)'; 
+        ctx.lineWidth = 4;
+        ctx.stroke(); 
+        ctx.restore();
     });
 }
 init();
