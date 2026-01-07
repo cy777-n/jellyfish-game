@@ -28,17 +28,18 @@
     <div class="score-box">最高<span id="highscore">0</span><div class="next-hint">NEXT <div id="next-dot"></div></div></div>
 </div>
 <div id="game-container">
-    <div id="game-over"><h2>滿出來了！</h2><p>得分: <span id="final-score">0</span></p><button onclick="location.reload()">重新挑戰</button></div>
+    <div id="game-over"><h2>滿出來啦！</h2><p>得分: <span id="final-score">0</span></p><button onclick="location.reload()">重新挑戰</button></div>
 </div>
 <script>
 const { Engine, Render, Runner, Bodies, Composite, Events, Body } = Matter;
 
-const mergeSoundSrc = 'https://assets.mixkit.co/active_storage/sfx/2020/2020-preview.mp3';
-const dropSoundSrc = 'https://assets.mixkit.co/active_storage/sfx/2004/2004-preview.mp3';
+const mergeSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2020/2020-preview.mp3');
+const dropSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2004/2004-preview.mp3');
 
-function playSound(src) {
-    const sound = new Audio(src);
-    sound.play().catch(() => {});
+function playAudio(audioObj) {
+    audioObj.pause();
+    audioObj.currentTime = 0;
+    audioObj.play().catch(() => {});
 }
 
 let engine, render, runner, currentJelly = null, nextLevel = null;
@@ -143,6 +144,8 @@ function setupEvents() {
         isTouching = true;
         const x = e.touches ? e.touches[0].clientX : e.clientX;
         updatePos(x);
+        mergeSound.play().then(() => mergeSound.pause()).catch(() => {});
+        dropSound.play().then(() => dropSound.pause()).catch(() => {});
     };
     const handleMove = (e) => {
         if (isTouching) {
@@ -154,7 +157,7 @@ function setupEvents() {
         if (!currentJelly || isGameOver || !isTouching) return;
         isTouching = false;
         Body.setStatic(currentJelly, false);
-        playSound(dropSoundSrc);
+        playAudio(dropSound);
         currentJelly = null;
         setTimeout(spawnNew, 800);
     };
@@ -175,7 +178,7 @@ function setupEvents() {
                     const midY = (bodyA.position.y + bodyB.position.y) / 2;
                     if (Composite.get(engine.world, bodyA.id, 'body') && Composite.get(engine.world, bodyB.id, 'body')) {
                         Composite.remove(engine.world, [bodyA, bodyB]);
-                        playSound(mergeSoundSrc);
+                        playAudio(mergeSound);
                         const nextLvl = lvl + 1;
                         const newJelly = Bodies.circle(midX, midY, jellyConfigs[nextLvl].r, {
                             label: 'jelly_' + nextLvl, restitution: 0.1, friction: 0.9
@@ -212,7 +215,6 @@ function drawLoop() {
     Events.on(render, 'afterRender', () => {
         const ctx = render.context;
         const bodies = Composite.allBodies(engine.world);
-        
         if (currentJelly && currentJelly.isStatic) {
             ctx.save();
             ctx.beginPath();
