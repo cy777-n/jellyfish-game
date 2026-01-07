@@ -41,12 +41,17 @@ let score = 0, isGameOver = false, isTouching = false;
 let highscore = parseInt(localStorage.getItem("jellyHighscore")) || 0;
 
 const jellyConfigs = [
-    { r: 8, color: '#FFB7C5', eyeSize: 1.0 }, { r: 15, color: '#C1E7E3', eyeSize: 1.5 }, 
-    { r: 23, color: '#B2E2A2', eyeSize: 2.0 }, { r: 32, color: '#FDFD96', eyeSize: 2.8 }, 
-    { r: 42, color: '#FFD1DC', eyeSize: 3.5 }, { r: 52, color: '#C3B1E1', eyeSize: 4.5 }, 
-    { r: 60, color: '#FFB347', eyeSize: 5.5 }, { r: 68, color: '#AEC6CF', eyeSize: 6.5 }, 
-    { r: 76, color: '#DEA5A4', eyeSize: 7.5 }, { r: 84, color: '#CB99C9', eyeSize: 8.5 }, 
-    { r: 92, color: '#FF6961', eyeSize: 9.5 } 
+    { r: 8, color: '#FFB7C5', eyeSize: 1.0 },  
+    { r: 15, color: '#4DD0E1', eyeSize: 1.5 }, 
+    { r: 23, color: '#B2E2A2', eyeSize: 2.0 }, 
+    { r: 32, color: '#FFEB3B', eyeSize: 2.8 }, 
+    { r: 42, color: '#FF8A65', eyeSize: 3.5 }, 
+    { r: 52, color: '#9575CD', eyeSize: 4.5 }, 
+    { r: 60, color: '#F06292', eyeSize: 5.5 }, 
+    { r: 68, color: '#81C784', eyeSize: 6.5 }, 
+    { r: 76, color: '#64B5F6', eyeSize: 7.5 }, 
+    { r: 84, color: '#FFD54F', eyeSize: 8.5 }, 
+    { r: 92, color: '#D32F2F', eyeSize: 9.5 }  
 ];
 
 const DEADLINE_Y = 100;
