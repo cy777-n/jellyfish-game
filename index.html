@@ -17,7 +17,7 @@
         .guide-arrow { color: rgba(255,255,255,0.3); font-size: 8px; margin: 0 1px; }
         #game-container { width: 98%; max-width: 550px; flex-grow: 1; position: relative; border: 3px solid #4fc3f7; border-top: none; border-radius: 0 0 25px 25px; background: linear-gradient(to bottom, #001a2e, #000b14); box-shadow: 0 5px 20px rgba(0,0,0,0.8); margin-bottom: 10px; overflow: hidden; }
         canvas { display: block; width: 100% !important; height: 100% !important; }
-        #game-over { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(255, 255, 255, 0.95); padding: 25px; border-radius: 20px; text-align: center; display: none; z-index: 100; width: 200px; }
+        #game-over { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(255, 255, 255, 0.95); padding: 25px; border-radius: 20px; text-align: center; display: none; z-index: 100; width: 200px; box-shadow: 0 0 30px rgba(0,0,0,0.5); }
         button { background: #ff4081; border: none; color: white; padding: 10px 20px; border-radius: 40px; font-weight: bold; cursor: pointer; margin-top: 15px; }
     </style>
 </head>
@@ -32,8 +32,15 @@
 </div>
 <script>
 const { Engine, Render, Runner, Bodies, Composite, Events, Body } = Matter;
-const mergeSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2020/2020-preview.mp3');
-const dropSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2004/2004-preview.mp3');
+
+const mergeSoundSrc = 'https://assets.mixkit.co/active_storage/sfx/2020/2020-preview.mp3';
+const dropSoundSrc = 'https://assets.mixkit.co/active_storage/sfx/2004/2004-preview.mp3';
+
+function playSound(src) {
+    const sound = new Audio(src);
+    sound.play().catch(() => {});
+}
+
 let engine, render, runner, currentJelly = null, nextLevel = null;
 let score = 0, isGameOver = false, isTouching = false;
 let highscore = parseInt(localStorage.getItem("jellyHighscore")) || 0;
@@ -147,7 +154,7 @@ function setupEvents() {
         if (!currentJelly || isGameOver || !isTouching) return;
         isTouching = false;
         Body.setStatic(currentJelly, false);
-        dropSound.play().catch(()=>{});
+        playSound(dropSoundSrc);
         currentJelly = null;
         setTimeout(spawnNew, 800);
     };
@@ -168,7 +175,7 @@ function setupEvents() {
                     const midY = (bodyA.position.y + bodyB.position.y) / 2;
                     if (Composite.get(engine.world, bodyA.id, 'body') && Composite.get(engine.world, bodyB.id, 'body')) {
                         Composite.remove(engine.world, [bodyA, bodyB]);
-                        mergeSound.play().catch(()=>{});
+                        playSound(mergeSoundSrc);
                         const nextLvl = lvl + 1;
                         const newJelly = Bodies.circle(midX, midY, jellyConfigs[nextLvl].r, {
                             label: 'jelly_' + nextLvl, restitution: 0.1, friction: 0.9
