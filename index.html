@@ -210,9 +210,9 @@ function drawLoop() {
             const r = config.r;
             ctx.save(); ctx.translate(x, y); ctx.rotate(body.angle);
             ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2);
-            ctx.fillStyle = config.color; ctx.globalAlpha = body.isStatic ? 0.95 : 0.85; ctx.fill();
-            ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 2; ctx.globalAlpha = 1; ctx.stroke();
-            ctx.beginPath(); ctx.fillStyle = '#FFC0CB'; ctx.globalAlpha = 0.3;
+            ctx.fillStyle = config.color; ctx.globalAlpha = 1.0; ctx.fill();
+            ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 2; ctx.stroke();
+            ctx.beginPath(); ctx.fillStyle = '#FFC0CB'; ctx.globalAlpha = 0.4;
             ctx.arc(-r*0.4, r*0.1, r*0.18, 0, Math.PI*2); ctx.arc(r*0.4, r*0.1, r*0.18, 0, Math.PI*2); ctx.fill();
             ctx.globalAlpha = 1; ctx.fillStyle = '#212121';
             ctx.beginPath(); ctx.arc(-r*0.28, -r*0.1, config.eyeSize, 0, Math.PI*2);
