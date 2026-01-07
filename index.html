@@ -41,16 +41,16 @@ let score = 0, isGameOver = false, isTouching = false;
 let highscore = parseInt(localStorage.getItem("jellyHighscore")) || 0;
 
 const jellyConfigs = [
-    { r: 8, color: '#FFB7C5', eyeSize: 1.0 },  
-    { r: 15, color: '#4DD0E1', eyeSize: 1.5 }, 
-    { r: 23, color: '#B2E2A2', eyeSize: 2.0 }, 
-    { r: 32, color: '#FFEB3B', eyeSize: 2.8 }, 
-    { r: 42, color: '#FF8A65', eyeSize: 3.5 }, 
-    { r: 52, color: '#9575CD', eyeSize: 4.5 }, 
-    { r: 60, color: '#F06292', eyeSize: 5.5 }, 
-    { r: 68, color: '#81C784', eyeSize: 6.5 }, 
-    { r: 76, color: '#64B5F6', eyeSize: 7.5 }, 
-    { r: 84, color: '#FFD54F', eyeSize: 8.5 }, 
+    { r: 8, color: '#dca8c2', eyeSize: 1.0 },  
+    { r: 15, color: '#3071a4', eyeSize: 1.5 }, 
+    { r: 23, color: '#f9de90', eyeSize: 2.0 }, 
+    { r: 32, color: '#ba9fe1', eyeSize: 2.8 }, 
+    { r: 42, color: '#a0d4cd', eyeSize: 3.5 }, 
+    { r: 52, color: '#c57ca1', eyeSize: 4.5 }, 
+    { r: 60, color: '#6fb5cf', eyeSize: 5.5 }, 
+    { r: 68, color: '#f8c6a1', eyeSize: 6.5 }, 
+    { r: 76, color: '#87b8e5', eyeSize: 7.5 }, 
+    { r: 84, color: '#6A1B9A', eyeSize: 8.5 }, 
     { r: 92, color: '#D32F2F', eyeSize: 9.5 }  
 ];
 
@@ -195,7 +195,6 @@ function drawLoop() {
     Events.on(render, 'afterRender', () => {
         const ctx = render.context;
         const bodies = Composite.allBodies(engine.world);
-        
         if (currentJelly && currentJelly.isStatic) {
             ctx.save();
             ctx.beginPath();
@@ -207,7 +206,6 @@ function drawLoop() {
             ctx.stroke();
             ctx.restore();
         }
-
         bodies.forEach(body => {
             if (!body.label || !body.label.startsWith('jelly_')) return;
             const config = jellyConfigs[body.level];
@@ -220,8 +218,8 @@ function drawLoop() {
             ctx.beginPath(); ctx.fillStyle = '#FFC0CB'; ctx.globalAlpha = 0.4;
             ctx.arc(-r*0.4, r*0.1, r*0.18, 0, Math.PI*2); ctx.arc(r*0.4, r*0.1, r*0.18, 0, Math.PI*2); ctx.fill();
             ctx.globalAlpha = 1; ctx.fillStyle = '#212121';
-            ctx.beginPath(); ctx.arc(-r*0.28, -r*0.1, config.eyeSize, 0, Math.PI*2);
-            ctx.arc(r*0.28, -r*0.1, config.eyeSize, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(-r*0.28, -r*0.1, config.eyeSize, 0, Math.PI * 2);
+            ctx.arc(r*0.28, -r*0.1, config.eyeSize, 0, Math.PI * 2); ctx.fill();
             ctx.beginPath(); ctx.arc(0, r*0.15, r*0.12, 0.2, Math.PI - 0.2);
             ctx.strokeStyle = '#212121'; ctx.lineWidth = 1.2; ctx.stroke();
             ctx.beginPath(); ctx.fillStyle = config.color;
@@ -231,7 +229,6 @@ function drawLoop() {
             }
             ctx.fill(); ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 1; ctx.stroke(); ctx.restore();
         });
-        
         ctx.beginPath(); ctx.setLineDash([5, 10]); ctx.moveTo(0, DEADLINE_Y);
         ctx.lineTo(render.canvas.width, DEADLINE_Y); ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)'; ctx.stroke(); ctx.setLineDash([]);
     });
