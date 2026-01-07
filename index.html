@@ -40,18 +40,20 @@ let engine, render, runner, currentJelly = null;
 let score = 0, isGameOver = false, isTouching = false;
 let highscore = parseInt(localStorage.getItem("jellyHighscore")) || 0;
 
+const PINK_BLUSH = '#FFB6C1'; 
+
 const jellyConfigs = [
-    { r: 8, color: '#dca8c2', eyeSize: 1.0 },  
-    { r: 15, color: '#3071a4', eyeSize: 1.5 }, 
-    { r: 23, color: '#f9de90', eyeSize: 2.0 }, 
-    { r: 32, color: '#ba9fe1', eyeSize: 2.8 }, 
-    { r: 42, color: '#a0d4cd', eyeSize: 3.5 }, 
-    { r: 52, color: '#c57ca1', eyeSize: 4.5 }, 
-    { r: 60, color: '#6fb5cf', eyeSize: 5.5 }, 
-    { r: 68, color: '#f8c6a1', eyeSize: 6.5 }, 
-    { r: 76, color: '#87b8e5', eyeSize: 7.5 }, 
-    { r: 84, color: '#6A1B9A', eyeSize: 8.5 }, 
-    { r: 92, color: '#D32F2F', eyeSize: 9.5 }  
+    { r: 8, color: '#fcf0f5', eyeSize: 1.0 }, 
+    { r: 15, color: '#f9de90', eyeSize: 1.5 }, 
+    { r: 23, color: '#f8c6a1', eyeSize: 2.0 }, 
+    { r: 32, color: '#dca8c2', eyeSize: 2.8 }, 
+    { r: 42, color: '#ba9fe1', eyeSize: 3.5 }, 
+    { r: 52, color: '#a0d4cd', eyeSize: 4.5 }, 
+    { r: 62, color: '#87b8e5', eyeSize: 5.5 }, 
+    { r: 72, color: '#c57ca1', eyeSize: 6.5 }, 
+    { r: 82, color: '#6fb5cf', eyeSize: 7.5 }, 
+    { r: 88, color: '#3071a4', eyeSize: 8.5 }, 
+    { r: 95, color: '#5e4373', eyeSize: 9.5 }  
 ];
 
 const DEADLINE_Y = 100;
@@ -79,6 +81,7 @@ function init() {
     setupEvents();
     drawLoop();
 }
+
 function createGuide() {
     const guide = document.getElementById('evolution-guide');
     guide.innerHTML = '';
@@ -96,6 +99,7 @@ function createGuide() {
         }
     });
 }
+
 function updateScore(pts) {
     score += pts;
     document.getElementById('score').innerText = score;
@@ -105,6 +109,7 @@ function updateScore(pts) {
         localStorage.setItem("jellyHighscore", highscore);
     }
 }
+
 function spawnNew() {
     if (isGameOver) return;
     let level;
@@ -120,6 +125,7 @@ function spawnNew() {
     currentJelly.level = level;
     Composite.add(engine.world, currentJelly);
 }
+
 function setupEvents() {
     const canvas = render.canvas;
     const updatePos = (clientX) => {
@@ -156,6 +162,7 @@ function setupEvents() {
     canvas.addEventListener('touchstart', (e) => { e.preventDefault(); handleStart(e); }, {passive: false});
     canvas.addEventListener('touchmove', (e) => { e.preventDefault(); handleMove(e); }, {passive: false});
     canvas.addEventListener('touchend', (e) => { e.preventDefault(); handleEnd(); }, {passive: false});
+
     Events.on(engine, 'collisionStart', (event) => {
         event.pairs.forEach(pair => {
             const { bodyA, bodyB } = pair;
@@ -179,6 +186,7 @@ function setupEvents() {
             }
         });
     });
+
     Events.on(engine, 'afterUpdate', () => {
         Composite.allBodies(engine.world).forEach(body => {
             if (!body.isStatic && body.position.y < DEADLINE_Y && body !== currentJelly) {
@@ -191,10 +199,12 @@ function setupEvents() {
         });
     });
 }
+
 function drawLoop() {
     Events.on(render, 'afterRender', () => {
         const ctx = render.context;
         const bodies = Composite.allBodies(engine.world);
+        
         if (currentJelly && currentJelly.isStatic) {
             ctx.save();
             ctx.beginPath();
@@ -206,29 +216,38 @@ function drawLoop() {
             ctx.stroke();
             ctx.restore();
         }
+
         bodies.forEach(body => {
             if (!body.label || !body.label.startsWith('jelly_')) return;
             const config = jellyConfigs[body.level];
             const { x, y } = body.position;
             const r = config.r;
             ctx.save(); ctx.translate(x, y); ctx.rotate(body.angle);
+            
             ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2);
             ctx.fillStyle = config.color; ctx.globalAlpha = 1.0; ctx.fill();
             ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 2; ctx.stroke();
-            ctx.beginPath(); ctx.fillStyle = '#FFC0CB'; ctx.globalAlpha = 0.4;
+            
+            ctx.beginPath(); 
+            ctx.fillStyle = PINK_BLUSH; ctx.globalAlpha = 1.0;
             ctx.arc(-r*0.4, r*0.1, r*0.18, 0, Math.PI*2); ctx.arc(r*0.4, r*0.1, r*0.18, 0, Math.PI*2); ctx.fill();
+            
             ctx.globalAlpha = 1; ctx.fillStyle = '#212121';
-            ctx.beginPath(); ctx.arc(-r*0.28, -r*0.1, config.eyeSize, 0, Math.PI * 2);
-            ctx.arc(r*0.28, -r*0.1, config.eyeSize, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(-r*0.28, -r*0.1, config.eyeSize, 0, Math.PI*2);
+            ctx.arc(r*0.28, -r*0.1, config.eyeSize, 0, Math.PI*2); ctx.fill();
             ctx.beginPath(); ctx.arc(0, r*0.15, r*0.12, 0.2, Math.PI - 0.2);
             ctx.strokeStyle = '#212121'; ctx.lineWidth = 1.2; ctx.stroke();
+            
             ctx.beginPath(); ctx.fillStyle = config.color;
             for(let i=0; i<5; i++){
                 const step = (r * 2) / 5; const tx = -r + (i * step) + step/2;
                 ctx.arc(tx, r*0.8, step/2, 0, Math.PI);
             }
-            ctx.fill(); ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 1; ctx.stroke(); ctx.restore();
+            ctx.fill(); ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 1; ctx.stroke(); 
+            
+            ctx.restore();
         });
+        
         ctx.beginPath(); ctx.setLineDash([5, 10]); ctx.moveTo(0, DEADLINE_Y);
         ctx.lineTo(render.canvas.width, DEADLINE_Y); ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)'; ctx.stroke(); ctx.setLineDash([]);
     });
