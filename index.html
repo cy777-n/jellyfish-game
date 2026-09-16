@@ -28,7 +28,7 @@
     <div class="score-box">最高<span id="highscore">0</span><div class="next-hint">NEXT <div id="next-dot"></div></div></div>
 </div>
 <div id="game-container">
-    <div id="game-over"><h2>滿出來了！</h2><p>得分: <span id="final-score">0</span></p><button onclick="location.reload()">重新挑戰</button></div>
+    <div id="game-over"><h2>滿出來了！</h2><p>得分: <span id="final-score">0</span></p><button onclick="startNewGame()">重新挑戰</button></div>
 </div>
 <script>
 const { Engine, Render, Runner, Bodies, Composite, Events, Body } = Matter;
@@ -37,6 +37,10 @@ const dropSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2004/20
 let engine, render, runner, currentJelly = null, nextLevel = null;
 let score = 0, isGameOver = false, isTouching = false;
 let highscore = parseInt(localStorage.getItem("jellyHighscore")) || 0;
+
+// 儲存目前遊戲進度用的 key。
+// 這和最高分使用不同的 key，所以重新整理/關閉網頁不會把最高分或遊戲進度弄混。
+const SAVE_KEY = "jellyGameSave_v1";
 
 const PINK_BLUSH = '#FFB6C1'; 
 const jellyConfigs = [
@@ -69,10 +73,25 @@ function init() {
     Render.run(render);
     runner = Runner.create();
     Runner.run(runner, engine);
-    nextLevel = getRandomLevel();
-    spawnNew();
     setupEvents();
     drawLoop();
+
+    // 優先讀取上次離開時的進度；沒有存檔才開新局
+    if (!loadGame()) {
+        nextLevel = getRandomLevel();
+        spawnNew();
+        saveGame();
+    }
+
+    // 定期保存，避免關閉分頁時只靠 beforeunload 而漏存
+    setInterval(saveGame, 500);
+
+    // 關閉分頁、切換 App、重新整理時都盡量保存
+    window.addEventListener("beforeunload", saveGame);
+    window.addEventListener("pagehide", saveGame);
+    document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "hidden") saveGame();
+    });
     window.addEventListener('resize', () => {
         const cw = container.clientWidth;
         const ch = container.clientHeight;
@@ -89,6 +108,116 @@ function getRandomLevel() {
     if (rand < 0.92) return 2;
     return 3;
 }
+
+
+// 把目前場上的水母、分數、下一顆水母等資訊存到瀏覽器。
+// localStorage 不會因為關閉網頁而消失，因此下次回來可以繼續。
+function saveGame() {
+    if (!engine || !render) return;
+
+    try {
+        const bodies = Composite.allBodies(engine.world)
+            .filter(body => body.label && body.label.startsWith('jelly_'))
+            .map(body => ({
+                level: body.level,
+                x: body.position.x,
+                y: body.position.y,
+                vx: body.velocity.x,
+                vy: body.velocity.y,
+                angle: body.angle,
+                angularVelocity: body.angularVelocity,
+                isStatic: body.isStatic
+            }));
+
+        const saveData = {
+            score,
+            nextLevel,
+            isGameOver,
+            bodies,
+            savedAt: Date.now()
+        };
+
+        localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
+    } catch (error) {
+        console.warn("遊戲進度儲存失敗：", error);
+    }
+}
+
+// 讀取上次的遊戲進度
+function loadGame() {
+    try {
+        const raw = localStorage.getItem(SAVE_KEY);
+        if (!raw) return false;
+
+        const data = JSON.parse(raw);
+        if (!data || !Array.isArray(data.bodies)) return false;
+
+        score = Number(data.score) || 0;
+        nextLevel = Number.isInteger(data.nextLevel) ? data.nextLevel : getRandomLevel();
+        isGameOver = Boolean(data.isGameOver);
+
+        document.getElementById('score').innerText = score;
+        document.getElementById('highscore').innerText = highscore;
+        document.getElementById('next-dot').style.background = jellyConfigs[nextLevel].color;
+
+        data.bodies.forEach(saved => {
+            if (!Number.isInteger(saved.level) || !jellyConfigs[saved.level]) return;
+
+            const body = Bodies.circle(
+                Number(saved.x) || render.canvas.width / 2,
+                Number(saved.y) || SPAWN_Y,
+                jellyConfigs[saved.level].r,
+                {
+                    isStatic: Boolean(saved.isStatic),
+                    label: 'jelly_' + saved.level,
+                    restitution: 0.1,
+                    friction: 0.9
+                }
+            );
+
+            body.level = saved.level;
+            Body.setAngle(body, Number(saved.angle) || 0);
+
+            if (!body.isStatic) {
+                Body.setVelocity(body, {
+                    x: Number(saved.vx) || 0,
+                    y: Number(saved.vy) || 0
+                });
+                Body.setAngularVelocity(body, Number(saved.angularVelocity) || 0);
+            }
+
+            Composite.add(engine.world, body);
+
+            // 上次離開時如果這顆是正在等待玩家放下的水母，
+            // 恢復後仍然可以繼續拖著它移動。
+            if (body.isStatic && !currentJelly) {
+                currentJelly = body;
+            }
+        });
+
+        if (isGameOver) {
+            document.getElementById('game-over').style.display = 'block';
+            document.getElementById('final-score').innerText = score;
+        } else if (!currentJelly) {
+            // 如果剛好在「放下後、下一顆生成前」關閉網頁，
+            // 回來時直接補生成下一顆，不會卡住。
+            spawnNew();
+        }
+
+        return true;
+    } catch (error) {
+        console.warn("遊戲進度讀取失敗，將開啟新遊戲：", error);
+        localStorage.removeItem(SAVE_KEY);
+        return false;
+    }
+}
+
+// 「重新挑戰」才會清除目前進度；單純關閉/重新整理不會清除。
+function startNewGame() {
+    localStorage.removeItem(SAVE_KEY);
+    location.reload();
+}
+
 
 function createGuide() {
     const guide = document.getElementById('evolution-guide');
@@ -149,7 +278,11 @@ function setupEvents() {
         Body.setStatic(currentJelly, false);
         dropSound.play().catch(()=>{});
         currentJelly = null;
-        setTimeout(spawnNew, 800);
+        saveGame();
+        setTimeout(() => {
+            spawnNew();
+            saveGame();
+        }, 800);
     };
     canvas.addEventListener('mousedown', handleStart);
     window.addEventListener('mousemove', handleMove);
@@ -177,11 +310,13 @@ function setupEvents() {
                         Composite.add(engine.world, newJelly);
                         score += (lvl + 1) * 8;
                         document.getElementById('score').innerText = score;
+                        saveGame();
                         if (score > highscore) {
                             highscore = score;
                             document.getElementById('highscore').innerText = highscore;
                             localStorage.setItem("jellyHighscore", highscore);
                         }
+                        saveGame();
                     }
                 }
             }
@@ -195,6 +330,7 @@ function setupEvents() {
                     isGameOver = true;
                     document.getElementById('game-over').style.display = 'block';
                     document.getElementById('final-score').innerText = score;
+                    saveGame();
                 }
             }
         });
