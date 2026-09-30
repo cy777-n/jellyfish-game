@@ -41,16 +41,16 @@
 <script>
 const { Engine, Render, Runner, Bodies, Composite, Events, Body } = Matter;
 // 音樂與音效完全分開控制。
-// 這裡使用遊戲自己的 Audio，不會去控制、暫停或改變 Spotify。
+// 遊戲只控制自己的音訊，不會控制、暫停、靜音或改變 Spotify。
 const mergeSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2020/2020-preview.mp3');
 const dropSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2004/2004-preview.mp3');
 
-// 原始程式沒有背景音樂來源，因此保留一個可替換的背景音樂欄位。
-// 注意：網頁只能控制自己的 Audio；不會讀取、暫停、靜音或改變 Spotify。
-// 若你之後有自己的 mp3，只要把 URL 換成你的音樂檔即可。
-const bgm = new Audio();
-bgm.loop = true;
-bgm.volume = 0.22;
+// 背景音樂使用 Web Audio API 產生，不需要外部音樂檔。
+let musicContext = null;
+let musicGain = null;
+let musicTimer = null;
+let musicStep = 0;
+const musicNotes = [261.63, 329.63, 392.00, 329.63, 293.66, 349.23, 440.00, 349.23];
 
 let soundEnabled = localStorage.getItem('jellySoundEnabled') !== 'false';
 let musicEnabled = localStorage.getItem('jellyMusicEnabled') !== 'false';
@@ -111,6 +111,7 @@ function startBackgroundMusic() {
             musicContext.resume();
         }
 
+        // 已經在播放就不要重複建立計時器。
         if (musicTimer) return;
 
         const playNote = () => {
@@ -126,12 +127,12 @@ function startBackgroundMusic() {
 
             noteGain.gain.setValueAtTime(0.0001, now);
             noteGain.gain.exponentialRampToValueAtTime(0.16, now + 0.08);
-            noteGain.gain.exponentialRampToValueAtTime(0.0001, now + 1.45);
+            noteGain.gain.exponentialRampToValueAtTime(0.0001, now + 1.40);
 
             osc.connect(noteGain);
             noteGain.connect(musicGain);
             osc.start(now);
-            osc.stop(now + 1.5);
+            osc.stop(now + 1.45);
 
             musicStep++;
         };
@@ -144,9 +145,20 @@ function startBackgroundMusic() {
 }
 
 function stopBackgroundMusic() {
+    // 清除下一個音符的排程。
     if (musicTimer) {
         clearInterval(musicTimer);
         musicTimer = null;
+    }
+
+    // 立即把目前正在響的背景音樂淡出。
+    if (musicGain && musicContext) {
+        try {
+            const now = musicContext.currentTime;
+            musicGain.gain.cancelScheduledValues(now);
+            musicGain.gain.setValueAtTime(musicGain.gain.value || 0.045, now);
+            musicGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.05);
+        } catch (error) {}
     }
 }
 
@@ -163,6 +175,7 @@ function setMusicEnabled(enabled) {
     localStorage.setItem('jellyMusicEnabled', musicEnabled);
 
     if (musicEnabled) {
+        // 重新開啟時，先恢復 AudioContext，再重新開始旋律。
         startBackgroundMusic();
     } else {
         stopBackgroundMusic();
@@ -182,7 +195,7 @@ function setupAudioControls() {
 
     document.getElementById('bgm-toggle').addEventListener('click', (e) => {
         e.stopPropagation();
-        startAudioAfterUserGesture();
+        audioStarted = true;
         setMusicEnabled(!musicEnabled);
     });
 
