@@ -54,7 +54,6 @@ const musicNotes = [261.63, 329.63, 392.00, 329.63, 293.66, 349.23, 440.00, 349.
 
 let soundEnabled = localStorage.getItem('jellySoundEnabled') !== 'false';
 let musicEnabled = localStorage.getItem('jellyMusicEnabled') !== 'false';
-let audioStarted = false;
 
 let engine, render, runner, currentJelly = null, nextLevel = null;
 let score = 0, isGameOver = false, isTouching = false;
@@ -162,9 +161,9 @@ function stopBackgroundMusic() {
     }
 }
 
-function startAudioAfterUserGesture() {
-    audioStarted = true;
-
+// 只有遊戲本身的互動會啟動背景音樂。
+// 合成音效按鈕絕對不會呼叫這個函式，因此兩套音訊完全分離。
+function startMusicFromGameInteraction() {
     if (musicEnabled) {
         startBackgroundMusic();
     }
@@ -193,21 +192,20 @@ function setSoundEnabled(enabled) {
 function setupAudioControls() {
     updateAudioButtons();
 
+    // 🎵 只控制背景音樂
     document.getElementById('bgm-toggle').addEventListener('click', (e) => {
+        e.preventDefault();
         e.stopPropagation();
-        audioStarted = true;
         setMusicEnabled(!musicEnabled);
     });
 
+    // 🔔 只控制合成音效
+    // 這裡不會啟動/停止背景音樂，也不會修改 musicEnabled。
     document.getElementById('sfx-toggle').addEventListener('click', (e) => {
+        e.preventDefault();
         e.stopPropagation();
-        startAudioAfterUserGesture();
         setSoundEnabled(!soundEnabled);
     });
-
-    // 第一次點擊遊戲時才啟動網頁自己的音訊，符合瀏覽器的 autoplay 規則。
-    // 這只啟動遊戲自己的音訊，不會控制 Spotify。
-    window.addEventListener('pointerdown', startAudioAfterUserGesture, { once: true });
 }
 
 function init() {
@@ -423,6 +421,11 @@ function setupEvents() {
     };
     const handleStart = (e) => {
         if (isGameOver) return;
+
+        // 玩家真的開始玩遊戲時，才啟動「背景音樂」。
+        // 這與合成音效開關完全無關。
+        startMusicFromGameInteraction();
+
         isTouching = true;
         const x = e.touches ? e.touches[0].clientX : e.clientX;
         updatePos(x);
