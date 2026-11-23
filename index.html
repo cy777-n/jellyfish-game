@@ -18,34 +18,34 @@
     <style>
         body { margin: 0; background: #000b14; font-family: 'Arial Rounded MT Bold', sans-serif; overflow: hidden; display: flex; flex-direction: column; align-items: center; height: 100vh; height: 100dvh; min-height: 0; touch-action: none; }
         #ui-top {
-            width: 100%; max-width: 600px; box-sizing: border-box;
-            display: grid; grid-template-columns: 38px minmax(50px,1fr) 52px 52px 38px;
-            grid-template-areas: "score guide best sound restart";
-            align-items: center; gap: 5px; padding: 4px 7px;
+            width: 100%; max-width: 550px; box-sizing: border-box;
+            display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr) auto auto;
+            grid-template-areas: "score best sound restart" "guide guide guide guide";
+            align-items: center; gap: 8px; padding: 9px 10px 8px;
             z-index: 10; flex-shrink: 0;
         }
         .score-box {
             color: #fff; font-size: 10px; background: rgba(255,255,255,.085);
             padding: 3px 5px; border-radius: 10px; border: 1px solid rgba(255,255,255,.16);
-            text-align: center; min-width: 0; min-height: 39px; box-sizing: border-box;
+            text-align: center; min-width: 0; min-height: 43px; box-sizing: border-box;
             display: flex; flex-direction: column; justify-content: center; gap: 1px;
             backdrop-filter: blur(6px);
         }
         .score-box span { display: block; font-size: 16px; line-height: 1.05; font-weight: 800; font-variant-numeric: tabular-nums; }
         #ui-top > .score-box:first-child { grid-area: score; }
-        #ui-top > .score-box:nth-of-type(2) { grid-area: best; }
+        #ui-top > .score-box:last-of-type { grid-area: best; }
         .next-hint { font-size: 8px; color: rgba(255,255,255,.62); margin-top: 1px; display: flex; align-items: center; justify-content: center; gap: 3px; }
         #next-dot { width: 7px; height: 7px; flex: 0 0 7px; border-radius: 50%; border: 1px solid #fff; box-shadow: 0 0 3px rgba(255,255,255,.4); }
         #evolution-guide {
             grid-area: guide; display: flex; justify-content: center; align-items: center;
-            flex-wrap: nowrap; gap: 2px; width: 100%; min-width: 0; height: 30px;
+            flex-wrap: nowrap; gap: clamp(3px, 1vw, 6px); width: 100%; min-width: 0; height: 32px;
             box-sizing: border-box; overflow: hidden; padding: 2px 3px;
             background: rgba(255,255,255,.045); border-radius: 9px;
             border: 1px solid rgba(255,255,255,.08);
         }
-        .guide-circle { display:block; box-sizing:border-box; width:8px !important; height:8px !important; min-width:8px; min-height:8px; flex:0 0 8px; aspect-ratio:1 / 1; border-radius:50%; border:1px solid rgba(255,255,255,.92); margin:0; padding:0; transform:none; }
+        .guide-circle { display:block; box-sizing:border-box; width:10px !important; height:10px !important; min-width:10px; min-height:10px; flex:0 0 10px; aspect-ratio:1 / 1; border-radius:50%; border:1px solid rgba(255,255,255,.92); margin:0; padding:0; transform:none; }
         .guide-arrow { display: none; }
-        #game-container { width: 98%; max-width: 550px; min-height: 0; flex-grow: 1; position: relative; border: 3px solid #4fc3f7; border-top: none; border-radius: 0 0 25px 25px; background: linear-gradient(to bottom, #001a2e, #000b14); box-shadow: 0 5px 20px rgba(0,0,0,0.8); margin-bottom: 10px; overflow: hidden; }
+        #game-container { box-sizing: border-box; width: min(98%, 550px); max-width: 550px; min-height: 0; flex-grow: 1; position: relative; border: 3px solid #4fc3f7; border-top: none; border-radius: 0 0 25px 25px; background: linear-gradient(to bottom, #001a2e, #000b14); box-shadow: 0 5px 20px rgba(0,0,0,0.8); margin-bottom: 10px; overflow: hidden; }
         canvas { display: block; width: 100% !important; height: 100% !important; }
         #game-over { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(255, 255, 255, 0.95); padding: 25px; border-radius: 20px; text-align: center; display: none; z-index: 100; width: 200px; }
         button { background: #ff4081; border: none; color: white; padding: 10px 20px; border-radius: 40px; font-weight: bold; cursor: pointer; margin-top: 15px; }
@@ -58,28 +58,27 @@
         #sound-toggle { grid-area: sound; }
         #sound-toggle.off { opacity: .48; }
         #restart-game {
-            grid-area: restart; align-self: center; margin: 0; min-width: 43px;
-            height: 36px; padding: 0 6px; border-radius: 10px; font-size: 10px;
+            grid-area: restart; align-self: center; margin: 0; min-width: 48px;
+            height: 36px; padding: 0 7px; border-radius: 10px; font-size: 10px;
             background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.16);
             white-space: nowrap; color: #dceaf4;
         }
         @media (max-width: 700px) and (orientation: landscape) {
-            #ui-top { padding: 2px 6px; gap: 4px; grid-template-columns: 36px minmax(45px,1fr) 48px 48px 35px; }
-            .score-box { min-height: 32px; padding: 2px 4px; font-size: 9px; border-radius: 8px; }
-            .score-box span { font-size: 13px; }
+            #ui-top { padding: 4px 8px 5px; gap: 5px; }
+            .score-box { min-height: 35px; padding: 2px 5px; font-size: 9px; border-radius: 9px; }
+            .score-box span { font-size: 14px; }
             .next-hint { font-size: 7px; }
-            #evolution-guide { height: 24px; gap: 1px; padding: 1px 2px; }
-            #sound-toggle { width: 100%; height: 29px; padding: 0 2px; font-size: 9px; border-radius: 8px; }
-            #restart-game { min-width: 37px; height: 29px; padding: 0 4px; font-size: 9px; border-radius: 8px; }
+            #evolution-guide { height: 25px; gap: 3px; padding: 1px 3px; }
+            .guide-circle { width: 9px !important; height: 9px !important; min-width: 9px; min-height: 9px; flex-basis: 9px; }
+            #sound-toggle, #restart-game { height: 30px; padding: 0 7px; font-size: 9px; border-radius: 8px; }
             #game-container { width: min(98%, 900px); margin-bottom: 3px; border-radius: 0 0 14px 14px; }
         }
         @media (max-width: 390px) and (orientation: portrait) {
-            #ui-top { padding: 3px 5px; gap: 3px; grid-template-columns: 34px minmax(40px,1fr) 45px 45px 33px; }
-            .score-box { min-height: 36px; padding: 2px 3px; }
-            .score-box span { font-size: 14px; }
-            #evolution-guide { height: 26px; gap: 1px; padding: 1px; }
-            #sound-toggle { width: 100%; height: 32px; padding: 0 2px; font-size: 8px; }
-            #restart-game { min-width: 36px; height: 32px; padding: 0 3px; font-size: 9px; }
+            #ui-top { padding: 7px 7px 6px; gap: 5px; grid-template-columns: minmax(0,1fr) minmax(0,1fr) auto auto; }
+            .score-box { min-height: 43px; padding: 4px 5px; font-size: 9px; }
+            .score-box span { font-size: 16px; }
+            #evolution-guide { height: 29px; gap: 2px; padding: 1px 2px; }
+            #sound-toggle, #restart-game { height: 33px; padding: 0 6px; font-size: 9px; }
         }
     </style>
 </head>
@@ -98,6 +97,7 @@
 const { Engine, Render, Runner, Bodies, Composite, Events, Body } = Matter;
 const mergeSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2020/2020-preview.mp3');
 const dropSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2004/2004-preview.mp3');
+[mergeSound, dropSound].forEach(audio => { audio.preload = 'auto'; audio.volume = 0.85; });
 let soundEnabled = localStorage.getItem('jellySoundEnabled') !== 'false';
 let engine, render, runner, currentJelly = null, nextLevel = null;
 let wallBodies = [];
@@ -121,6 +121,17 @@ const jellyConfigs = [
 
 const DEADLINE_Y = 55; 
 const SPAWN_Y = 30;
+
+// 保留原本清脆的掉落／合成音效來源；每次觸發都從頭播放。
+function playGameSfx(audio) {
+    if (!soundEnabled) return;
+    try {
+        audio.pause();
+        audio.currentTime = 0;
+        const result = audio.play();
+        if (result && typeof result.catch === 'function') result.catch(() => {});
+    } catch (error) {}
+}
 
 
 function init() {
@@ -368,7 +379,7 @@ function setupEvents() {
         if (!currentJelly || isGameOver || !isTouching) return;
         isTouching = false;
         Body.setStatic(currentJelly, false);
-        if (soundEnabled) { dropSound.currentTime = 0; dropSound.play().catch(()=>{}); }
+        if (soundEnabled) playGameSfx(dropSound);
         currentJelly = null;
         saveGame();
         setTimeout(() => {
@@ -393,7 +404,7 @@ function setupEvents() {
                     const midY = (bodyA.position.y + bodyB.position.y) / 2;
                     if (Composite.get(engine.world, bodyA.id, 'body') && Composite.get(engine.world, bodyB.id, 'body')) {
                         Composite.remove(engine.world, [bodyA, bodyB]);
-                        if (soundEnabled) { mergeSound.currentTime = 0; mergeSound.play().catch(()=>{}); }
+                        if (soundEnabled) playGameSfx(mergeSound);
                         const nextLvl = lvl + 1;
                         const newJelly = Bodies.circle(midX, midY, jellyConfigs[nextLvl].r, {
                             label: 'jelly_' + nextLvl, restitution: 0.1, friction: 0.9
@@ -504,7 +515,6 @@ soundToggle.addEventListener('click', (e) => {
     }
 });
 updateSoundButton();
-updateMusicButton();
 
 </script>
 </body>
