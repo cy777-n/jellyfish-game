@@ -28,8 +28,9 @@
         #ui-top {
             width: 100%; max-width: 600px; flex: 0 0 auto;
             display: grid;
-            grid-template-columns: minmax(72px,1.45fr) minmax(42px,.82fr) minmax(66px,1.2fr) 48px 46px;
-            align-items: center; gap: 3px; padding: 6px 7px;
+            grid-template-columns: minmax(66px,1.15fr) minmax(40px,.72fr) minmax(0,2.2fr) 44px 42px;
+            grid-template-areas: "score best guide sound restart";
+            align-items: center; gap: 4px; padding: 6px 7px;
             z-index: 10;
         }
         .score-box {
@@ -45,7 +46,10 @@
             display: block; font-size: 14px; line-height: 1.05;
             font-weight: 800; font-variant-numeric: tabular-nums;
         }
-        #score-box { min-height: 46px; }
+        #score-box { grid-area: score; min-height: 46px; }
+        #best-box { grid-area: best; }
+        #sound-toggle { grid-area: sound; }
+        #restart-game { grid-area: restart; }
         #score-box span { font-size: 20px; }
         #best-box span { font-size: 14px; }
         .next-hint {
@@ -59,17 +63,19 @@
             box-shadow: 0 0 3px rgba(255,255,255,.4);
         }
         #evolution-guide {
-            width: 100%; min-width: 0; height: 38px; padding: 2px 1px;
-            display: flex; align-items: center; justify-content: center;
+            grid-area: guide;
+            width: 100%; min-width: 0; height: 42px; padding: 4px 3px;
+            display: flex; align-items: center; justify-content: space-evenly;
             flex-wrap: nowrap; gap: 1px; overflow: hidden;
             background: rgba(255,255,255,.045);
             border: 1px solid rgba(255,255,255,.08); border-radius: 9px;
         }
         .guide-circle {
-            display: block; flex: 0 0 5px; width: 5px; height: 5px;
-            min-width: 5px; min-height: 5px; aspect-ratio: 1 / 1;
+            display: block; flex: 0 0 13px; width: 13px; height: 13px;
+            min-width: 13px; min-height: 13px; max-width: 13px; aspect-ratio: 1 / 1;
             margin: 0; padding: 0; border: 1px solid rgba(255,255,255,.92);
             border-radius: 50%; transform: none;
+            box-shadow: 0 0 7px rgba(255,255,255,.2);
         }
         .guide-arrow { display: none; }
         #sound-toggle, #restart-game {
@@ -83,12 +89,19 @@
         #game-container {
             width: 98%; max-width: 550px; min-height: 0; flex: 1 1 auto;
             position: relative; overflow: hidden; margin-bottom: 6px;
+            display: flex; align-items: center; justify-content: center;
             border: 3px solid #4fc3f7; border-top: none;
             border-radius: 0 0 20px 20px;
             background: linear-gradient(to bottom, #001a2e, #000b14);
             box-shadow: 0 5px 20px rgba(0,0,0,.8);
         }
-        canvas { display: block; width: 100% !important; height: 100% !important; }
+        /* 畫布保持原始世界比例，只在容器內等比例縮放，不拉寬、不壓扁。 */
+        #game-container canvas {
+            display: block; flex: 0 0 auto;
+            width: auto !important; height: auto !important;
+            max-width: 100%; max-height: 100%;
+            object-fit: contain; touch-action: none;
+        }
         #game-over {
             position: absolute; top: 50%; left: 50%;
             transform: translate(-50%,-50%);
@@ -104,26 +117,31 @@
         #sound-toggle, #restart-game { margin-top: 0; }
         @media (max-width: 390px) and (orientation: portrait) {
             #ui-top {
-                grid-template-columns: minmax(68px,1.4fr) minmax(40px,.8fr) minmax(64px,1.15fr) 45px 43px;
-                gap: 2px; padding: 5px 5px;
+                grid-template-columns: minmax(62px,1.1fr) minmax(36px,.7fr) minmax(0,2fr) 39px 36px;
+                gap: 2px; padding: 4px 4px;
             }
             .score-box { min-height: 39px; padding: 2px 3px; font-size: 8px; }
             #score-box { min-height: 43px; }
             #score-box span { font-size: 18px; }
             #best-box span { font-size: 13px; }
             .next-hint { font-size: 7px; gap: 2px; }
-            #evolution-guide { height: 33px; gap: 1px; }
-            .guide-circle { flex-basis: 5px; width: 5px; height: 5px; min-width: 5px; min-height: 5px; }
-            #sound-toggle, #restart-game { height: 32px; font-size: 8px; padding: 0 1px; }
+            #evolution-guide { height: 34px; gap: 1px; padding: 3px 2px; }
+            .guide-circle { flex: 0 0 8px; width: 8px; height: 8px; min-width: 8px; min-height: 8px; max-width: 8px; }
+            #sound-toggle, #restart-game { height: 30px; font-size: 7px; padding: 0 1px; }
         }
         @media (max-width: 700px) and (orientation: landscape) {
-            #ui-top { padding: 3px 7px 4px; gap: 3px; }
+            #ui-top {
+                grid-template-columns: minmax(62px,1.1fr) minmax(36px,.7fr) minmax(0,2fr) 40px 38px;
+                grid-template-areas: "score best guide sound restart";
+                padding: 3px 7px 4px; gap: 3px;
+            }
             .score-box { min-height: 33px; padding: 2px 4px; font-size: 8px; }
             #score-box { min-height: 36px; }
             #score-box span { font-size: 16px; }
             #best-box span { font-size: 12px; }
             .next-hint { font-size: 7px; }
-            #evolution-guide { height: 27px; }
+            #evolution-guide { height: 30px; padding: 2px; gap: 1px; }
+            .guide-circle { flex: 0 0 8px; width: 8px; height: 8px; min-width: 8px; min-height: 8px; max-width: 8px; }
             #sound-toggle, #restart-game { height: 28px; font-size: 8px; }
             #game-container { width: min(98%, 900px); margin-bottom: 3px; border-radius: 0 0 14px 14px; }
         }
@@ -151,6 +169,7 @@ let engine, render, runner, currentJelly = null, nextLevel = null;
 let wallBodies = [];
 let skipSaveOnUnload = false;
 let score = 0, isGameOver = false, isTouching = false;
+const topZoneTimers = new WeakMap();
 let highscore = parseInt(localStorage.getItem("jellyHighscore")) || 0;
 
 // 儲存目前遊戲進度用的 key。
@@ -192,7 +211,7 @@ function init() {
     const ch = savedViewport ? savedViewport.height : Math.max(1, container.clientHeight);
     render = Render.create({
         element: container, engine: engine,
-        options: { width: cw, height: ch, wireframes: false, background: 'transparent', pixelRatio: Math.min(window.devicePixelRatio || 1, 2) }
+        options: { width: cw, height: ch, wireframes: false, background: 'transparent', pixelRatio: Math.min(window.devicePixelRatio || 1, 3) }
     });
     rebuildWalls(cw, ch);
     Render.run(render);
@@ -203,7 +222,7 @@ function init() {
 
     if (!loadGame()) {
         nextLevel = getRandomLevel();
-        spawnNew();
+        updateNextHint();
         saveGame();
     }
 
@@ -218,7 +237,12 @@ function init() {
     let resizeTimer;
     const handleResize = () => {
         clearTimeout(resizeTimer);
-        resizeTimer = setTimeout(resizeGame, 120);
+        resizeTimer = setTimeout(() => {
+            // 方向或可視區域改變時，若手指仍按著畫面，安全結束這次拖曳，
+            // 避免 pointer capture 遺失後，下一顆水母一直停留在靜止狀態。
+            window.dispatchEvent(new Event('jelly-layout-change'));
+            resizeGame();
+        }, 180);
     };
     window.addEventListener('resize', handleResize);
     window.addEventListener('orientationchange', handleResize);
@@ -235,8 +259,8 @@ function rebuildWalls(cw, ch) {
 }
 
 function resizeGame() {
-    // 僅讓 canvas 隨螢幕容器縮放顯示，不改變 Matter.js 世界尺寸、
-    // 水母座標、半徑或速度。轉回原方向時，畫面與物理狀態都維持原樣。
+    // 不重建 Matter.js 世界、不改變世界寬高，也不縮放任何水母物件。
+    // CSS 會把原比例畫布完整放進新尺寸的容器，因此旋轉裝置不會改變遊戲狀態。
     if (!render) return;
     saveGame();
 }
@@ -257,7 +281,7 @@ function saveGame() {
 
     try {
         const bodies = engine.world.bodies
-            .filter(body => body.label && body.label.startsWith('jelly_'))
+            .filter(body => body.label && body.label.startsWith('jelly_') && !(body === currentJelly && body.isStatic))
             .map(body => ({
                 level: body.level,
                 x: body.position.x,
@@ -309,14 +333,17 @@ function loadGame() {
 
         score = Number(data.score) || 0;
         nextLevel = Number.isInteger(data.nextLevel) ? data.nextLevel : getRandomLevel();
-        isGameOver = Boolean(data.isGameOver);
+        // 忽略前一版錯誤判定後存下的 game-over 狀態；若場上真的堆到警戒線上方，新的穩定判定會重新確認。
+        isGameOver = false;
 
         document.getElementById('score').innerText = score;
         document.getElementById('highscore').innerText = highscore;
-        document.getElementById('next-dot').style.background = jellyConfigs[nextLevel].color;
+        updateNextHint();
 
         data.bodies.forEach(saved => {
             if (!Number.isInteger(saved.level) || !jellyConfigs[saved.level]) return;
+            // 舊版存檔中的靜態預覽水母不再載入；新版會等玩家碰觸才生成。
+            if (saved.isStatic) return;
 
             const body = Bodies.circle(
                 Number(saved.x) || render.options.width / 2,
@@ -344,21 +371,8 @@ function loadGame() {
 
             Composite.add(engine.world, body);
 
-            // 上次離開時如果這顆是正在等待玩家放下的水母，
-            // 恢復後仍然可以繼續拖著它移動。
-            if (body.isStatic && !currentJelly) {
-                currentJelly = body;
-            }
         });
 
-        if (isGameOver) {
-            document.getElementById('game-over').style.display = 'block';
-            document.getElementById('final-score').innerText = score;
-        } else if (!currentJelly) {
-            // 如果剛好在「放下後、下一顆生成前」關閉網頁，
-            // 回來時直接補生成下一顆，不會卡住。
-            spawnNew();
-        }
 
         return true;
     } catch (error) {
@@ -381,67 +395,114 @@ function startNewGame() {
 function createGuide() {
     const guide = document.getElementById('evolution-guide');
     guide.innerHTML = '';
-    jellyConfigs.forEach((cfg) => {
+    jellyConfigs.forEach((cfg, index) => {
         const circle = document.createElement('span');
         circle.className = 'guide-circle';
         circle.style.backgroundColor = cfg.color;
+        circle.title = `第 ${index + 1} 階`;
         guide.appendChild(circle);
+        if (index < jellyConfigs.length - 1) {
+            const arrow = document.createElement('span');
+            arrow.className = 'guide-arrow';
+            arrow.textContent = '›';
+            guide.appendChild(arrow);
+        }
     });
 }
 
-function spawnNew() {
-    if (isGameOver) return;
+function updateNextHint() {
+    if (Number.isInteger(nextLevel) && jellyConfigs[nextLevel]) {
+        document.getElementById('next-dot').style.background = jellyConfigs[nextLevel].color;
+    }
+}
+
+function createCurrentJelly(x) {
+    if (currentJelly || isGameOver) return;
     const cw = render.options.width;
     const level = nextLevel;
-    currentJelly = Bodies.circle(cw/2, SPAWN_Y, jellyConfigs[level].r, {
-        isStatic: true, label: 'jelly_' + level, restitution: 0.1, friction: 0.9, render: { visible: false }
+    const r = jellyConfigs[level].r;
+    const safeX = Math.max(r, Math.min(cw - r, x));
+    currentJelly = Bodies.circle(safeX, SPAWN_Y, r, {
+        isStatic: true,
+        label: 'jelly_' + level,
+        restitution: 0.1,
+        friction: 0.9,
+        render: { visible: false }
     });
     currentJelly.level = level;
     Composite.add(engine.world, currentJelly);
     nextLevel = getRandomLevel();
-    document.getElementById('next-dot').style.background = jellyConfigs[nextLevel].color;
+    updateNextHint();
 }
+
 
 function setupEvents() {
     const canvas = render.canvas;
+    let activePointerId = null;
+
+    const worldX = (clientX) => {
+        const rect = canvas.getBoundingClientRect();
+        return (clientX - rect.left) * (render.options.width / rect.width);
+    };
+
     const updatePos = (clientX) => {
         if (!currentJelly || isGameOver) return;
-        const rect = canvas.getBoundingClientRect();
-        const x = (clientX - rect.left) * (render.options.width / rect.width);
+        const x = worldX(clientX);
         const r = jellyConfigs[currentJelly.level].r;
         const cw = render.options.width;
         Body.setPosition(currentJelly, { x: Math.max(r, Math.min(cw - r, x)), y: SPAWN_Y });
     };
+
     const handleStart = (e) => {
-        if (isGameOver) return;
+        if (isGameOver || activePointerId !== null) return;
+        e.preventDefault();
+        activePointerId = e.pointerId;
+        if (!currentJelly) createCurrentJelly(worldX(e.clientX));
+        updatePos(e.clientX);
         isTouching = true;
-        const x = e.touches ? e.touches[0].clientX : e.clientX;
-        updatePos(x);
+        try { canvas.setPointerCapture(e.pointerId); } catch (error) {}
     };
+
     const handleMove = (e) => {
-        if (isTouching) {
-            const x = e.touches ? e.touches[0].clientX : e.clientX;
-            updatePos(x);
+        if (!isTouching || e.pointerId !== activePointerId) return;
+        e.preventDefault();
+        updatePos(e.clientX);
+    };
+
+    const handleEnd = (e) => {
+        if (e.pointerId !== activePointerId) return;
+        if (currentJelly && !isGameOver && isTouching) {
+            isTouching = false;
+            const released = currentJelly;
+            currentJelly = null;
+            Body.setStatic(released, false);
+            if (soundEnabled) playGameSfx(dropSound);
+            saveGame();
+        }
+        isTouching = false;
+        activePointerId = null;
+    };
+
+    const handleInterruptedPointer = () => {
+        activePointerId = null;
+        isTouching = false;
+        if (currentJelly && currentJelly.isStatic && !isGameOver) {
+            const released = currentJelly;
+            currentJelly = null;
+            Body.setStatic(released, false);
+            Body.setVelocity(released, { x: 0, y: 0 });
+            Body.setAngularVelocity(released, 0);
+            saveGame();
         }
     };
-    const handleEnd = () => {
-        if (!currentJelly || isGameOver || !isTouching) return;
-        isTouching = false;
-        Body.setStatic(currentJelly, false);
-        if (soundEnabled) playGameSfx(dropSound);
-        currentJelly = null;
-        saveGame();
-        setTimeout(() => {
-            spawnNew();
-            saveGame();
-        }, 800);
-    };
-    canvas.addEventListener('mousedown', handleStart);
-    window.addEventListener('mousemove', handleMove);
-    window.addEventListener('mouseup', handleEnd);
-    canvas.addEventListener('touchstart', (e) => { e.preventDefault(); handleStart(e); }, {passive: false});
-    canvas.addEventListener('touchmove', (e) => { e.preventDefault(); handleMove(e); }, {passive: false});
-    canvas.addEventListener('touchend', (e) => { e.preventDefault(); handleEnd(); }, {passive: false});
+
+    canvas.addEventListener('pointerdown', handleStart, { passive: false });
+    canvas.addEventListener('pointermove', handleMove, { passive: false });
+    canvas.addEventListener('pointerup', handleEnd, { passive: false });
+    canvas.addEventListener('pointercancel', handleEnd, { passive: false });
+    canvas.addEventListener('lostpointercapture', handleEnd, { passive: false });
+    window.addEventListener('jelly-layout-change', handleInterruptedPointer);
+    window.addEventListener('blur', handleInterruptedPointer);
 
     Events.on(engine, 'collisionStart', (event) => {
         event.pairs.forEach(pair => {
@@ -475,14 +536,25 @@ function setupEvents() {
     });
 
     Events.on(engine, 'afterUpdate', () => {
+        if (isGameOver) return;
+        const now = performance.now();
         engine.world.bodies.forEach(body => {
-            if (!body.isStatic && body.position.y < DEADLINE_Y && body !== currentJelly) {
-                if (Math.abs(body.velocity.y) < 0.01) {
+            if (!body.label || !body.label.startsWith('jelly_') || body.isStatic) return;
+            const speed = Math.hypot(body.velocity.x, body.velocity.y);
+            const isAboveLine = body.position.y < DEADLINE_Y;
+            const isSettled = speed < 0.12 && Math.abs(body.angularVelocity) < 0.025;
+
+            if (isAboveLine && isSettled) {
+                if (!topZoneTimers.has(body)) topZoneTimers.set(body, now);
+                // 必須持續停在警戒線上方且幾乎靜止 1.2 秒，才判定真正滿出。
+                if (now - topZoneTimers.get(body) >= 1200) {
                     isGameOver = true;
                     document.getElementById('game-over').style.display = 'block';
                     document.getElementById('final-score').innerText = score;
                     saveGame();
                 }
+            } else {
+                topZoneTimers.delete(body);
             }
         });
     });
@@ -511,22 +583,30 @@ function drawLoop() {
             const { x, y } = body.position;
             const r = config.r;
             ctx.save(); ctx.translate(x, y); ctx.rotate(body.angle);
+
+            // 恢復最初版本的半圓形裙襬，不再繪製垂直觸手。
+            ctx.beginPath(); ctx.fillStyle = config.color;
+            for (let i = 0; i < 5; i++) {
+                const step = (r * 2) / 5;
+                const tx = -r + (i * step) + step / 2;
+                ctx.arc(tx, r * 0.8, step / 2, 0, Math.PI);
+            }
+            ctx.fill();
+            ctx.strokeStyle = '#FFFFFF';
+            ctx.lineWidth = Math.max(1, r * 0.025);
+            ctx.stroke();
+
             ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2);
             ctx.fillStyle = config.color; ctx.fill();
-            ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 2; ctx.stroke();
+            ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = Math.max(1, r * 0.025); ctx.stroke();
             ctx.beginPath(); ctx.fillStyle = PINK_BLUSH;
             ctx.arc(-r*0.4, r*0.1, r*0.18, 0, Math.PI*2); ctx.arc(r*0.4, r*0.1, r*0.18, 0, Math.PI*2); ctx.fill();
             ctx.fillStyle = '#212121';
             ctx.beginPath(); ctx.arc(-r*0.28, -r*0.1, config.eyeSize, 0, Math.PI*2);
             ctx.arc(r*0.28, -r*0.1, config.eyeSize, 0, Math.PI*2); ctx.fill();
             ctx.beginPath(); ctx.arc(0, r*0.15, r*0.12, 0.2, Math.PI - 0.2);
-            ctx.strokeStyle = '#212121'; ctx.lineWidth = 1.2; ctx.stroke();
-            ctx.beginPath(); ctx.fillStyle = config.color;
-            for(let i=0; i<5; i++){
-                const step = (r * 2) / 5; const tx = -r + (i * step) + step/2;
-                ctx.arc(tx, r*0.8, step/2, 0, Math.PI);
-            }
-            ctx.fill(); ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 1; ctx.stroke(); ctx.restore();
+            ctx.strokeStyle = '#212121'; ctx.lineWidth = Math.max(0.9, r * 0.015); ctx.stroke();
+            ctx.restore();
         });
         
         ctx.save();
