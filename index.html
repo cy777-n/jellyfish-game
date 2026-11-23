@@ -15,78 +15,126 @@
     <meta name="twitter:title" content="水母合成大作戰">
     <meta name="twitter:description" content="來玩水母！">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+
     <style>
-        body { margin: 0; background: #000b14; font-family: 'Arial Rounded MT Bold', sans-serif; overflow: hidden; display: flex; flex-direction: column; align-items: center; height: 100vh; height: 100dvh; min-height: 0; touch-action: none; }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0; height: 100vh; height: 100dvh; min-height: 0;
+            display: flex; flex-direction: column; align-items: center;
+            overflow: hidden; touch-action: none;
+            background: #000b14; color: #fff;
+            font-family: 'Arial Rounded MT Bold', Arial, sans-serif;
+        }
         #ui-top {
-            width: 100%; max-width: 550px; box-sizing: border-box;
-            display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr) auto auto;
-            grid-template-areas: "score best sound restart" "guide guide guide guide";
-            align-items: center; gap: 8px; padding: 9px 10px 8px;
-            z-index: 10; flex-shrink: 0;
+            width: 100%; max-width: 600px; flex: 0 0 auto;
+            display: grid;
+            grid-template-columns: minmax(72px,1.45fr) minmax(42px,.82fr) minmax(66px,1.2fr) 48px 46px;
+            align-items: center; gap: 3px; padding: 6px 7px;
+            z-index: 10;
         }
         .score-box {
-            color: #fff; font-size: 10px; background: rgba(255,255,255,.085);
-            padding: 3px 5px; border-radius: 10px; border: 1px solid rgba(255,255,255,.16);
-            text-align: center; min-width: 0; min-height: 43px; box-sizing: border-box;
-            display: flex; flex-direction: column; justify-content: center; gap: 1px;
-            backdrop-filter: blur(6px);
+            min-width: 0; min-height: 42px; padding: 3px 4px;
+            display: flex; flex-direction: column; justify-content: center;
+            gap: 1px; overflow: hidden; text-align: center;
+            color: #fff; font-size: 9px; font-weight: 600;
+            background: rgba(255,255,255,.085);
+            border: 1px solid rgba(255,255,255,.16);
+            border-radius: 9px; backdrop-filter: blur(6px);
         }
-        .score-box span { display: block; font-size: 16px; line-height: 1.05; font-weight: 800; font-variant-numeric: tabular-nums; }
-        #ui-top > .score-box:first-child { grid-area: score; }
-        #ui-top > .score-box:last-of-type { grid-area: best; }
-        .next-hint { font-size: 8px; color: rgba(255,255,255,.62); margin-top: 1px; display: flex; align-items: center; justify-content: center; gap: 3px; }
-        #next-dot { width: 7px; height: 7px; flex: 0 0 7px; border-radius: 50%; border: 1px solid #fff; box-shadow: 0 0 3px rgba(255,255,255,.4); }
+        .score-box span {
+            display: block; font-size: 14px; line-height: 1.05;
+            font-weight: 800; font-variant-numeric: tabular-nums;
+        }
+        #score-box { min-height: 46px; }
+        #score-box span { font-size: 20px; }
+        #best-box span { font-size: 14px; }
+        .next-hint {
+            display: flex; align-items: center; justify-content: center;
+            gap: 3px; margin-top: 2px; color: rgba(255,255,255,.72);
+            font-size: 8px; line-height: 1;
+        }
+        #next-dot {
+            width: 8px; height: 8px; flex: 0 0 8px;
+            border: 1px solid #fff; border-radius: 50%;
+            box-shadow: 0 0 3px rgba(255,255,255,.4);
+        }
         #evolution-guide {
-            grid-area: guide; display: flex; justify-content: center; align-items: center;
-            flex-wrap: nowrap; gap: clamp(3px, 1vw, 6px); width: 100%; min-width: 0; height: 32px;
-            box-sizing: border-box; overflow: hidden; padding: 2px 3px;
-            background: rgba(255,255,255,.045); border-radius: 9px;
-            border: 1px solid rgba(255,255,255,.08);
+            width: 100%; min-width: 0; height: 38px; padding: 2px 1px;
+            display: flex; align-items: center; justify-content: center;
+            flex-wrap: nowrap; gap: 1px; overflow: hidden;
+            background: rgba(255,255,255,.045);
+            border: 1px solid rgba(255,255,255,.08); border-radius: 9px;
         }
-        .guide-circle { display:block; box-sizing:border-box; width:10px !important; height:10px !important; min-width:10px; min-height:10px; flex:0 0 10px; aspect-ratio:1 / 1; border-radius:50%; border:1px solid rgba(255,255,255,.92); margin:0; padding:0; transform:none; }
+        .guide-circle {
+            display: block; flex: 0 0 5px; width: 5px; height: 5px;
+            min-width: 5px; min-height: 5px; aspect-ratio: 1 / 1;
+            margin: 0; padding: 0; border: 1px solid rgba(255,255,255,.92);
+            border-radius: 50%; transform: none;
+        }
         .guide-arrow { display: none; }
-        #game-container { box-sizing: border-box; width: min(98%, 550px); max-width: 550px; min-height: 0; flex-grow: 1; position: relative; border: 3px solid #4fc3f7; border-top: none; border-radius: 0 0 25px 25px; background: linear-gradient(to bottom, #001a2e, #000b14); box-shadow: 0 5px 20px rgba(0,0,0,0.8); margin-bottom: 10px; overflow: hidden; }
-        canvas { display: block; width: 100% !important; height: 100% !important; }
-        #game-over { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(255, 255, 255, 0.95); padding: 25px; border-radius: 20px; text-align: center; display: none; z-index: 100; width: 200px; }
-        button { background: #ff4081; border: none; color: white; padding: 10px 20px; border-radius: 40px; font-weight: bold; cursor: pointer; margin-top: 15px; }
-#sound-toggle {
-            align-self: center; margin: 0; min-width: 0; width: 100%;
-            height: 36px; padding: 0 3px; border-radius: 9px; font-size: 10px;
-            background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.16);
-            color: #dceaf4; display: flex; align-items: center; justify-content: center;
+        #sound-toggle, #restart-game {
+            width: 100%; min-width: 0; height: 36px; margin: 0; padding: 0 2px;
+            display: flex; align-items: center; justify-content: center;
+            white-space: nowrap; color: #dceaf4; font-size: 9px;
+            background: rgba(255,255,255,.08);
+            border: 1px solid rgba(255,255,255,.16); border-radius: 9px;
         }
-        #sound-toggle { grid-area: sound; }
         #sound-toggle.off { opacity: .48; }
-        #restart-game {
-            grid-area: restart; align-self: center; margin: 0; min-width: 48px;
-            height: 36px; padding: 0 7px; border-radius: 10px; font-size: 10px;
-            background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.16);
-            white-space: nowrap; color: #dceaf4;
+        #game-container {
+            width: 98%; max-width: 550px; min-height: 0; flex: 1 1 auto;
+            position: relative; overflow: hidden; margin-bottom: 6px;
+            border: 3px solid #4fc3f7; border-top: none;
+            border-radius: 0 0 20px 20px;
+            background: linear-gradient(to bottom, #001a2e, #000b14);
+            box-shadow: 0 5px 20px rgba(0,0,0,.8);
+        }
+        canvas { display: block; width: 100% !important; height: 100% !important; }
+        #game-over {
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%,-50%);
+            width: 200px; padding: 25px; z-index: 100;
+            display: none; text-align: center; color: #17212b;
+            background: rgba(255,255,255,.95); border-radius: 20px;
+        }
+        button {
+            background: #ff4081; border: none; color: white;
+            padding: 10px 20px; border-radius: 40px;
+            font-weight: bold; cursor: pointer; margin-top: 15px;
+        }
+        #sound-toggle, #restart-game { margin-top: 0; }
+        @media (max-width: 390px) and (orientation: portrait) {
+            #ui-top {
+                grid-template-columns: minmax(68px,1.4fr) minmax(40px,.8fr) minmax(64px,1.15fr) 45px 43px;
+                gap: 2px; padding: 5px 5px;
+            }
+            .score-box { min-height: 39px; padding: 2px 3px; font-size: 8px; }
+            #score-box { min-height: 43px; }
+            #score-box span { font-size: 18px; }
+            #best-box span { font-size: 13px; }
+            .next-hint { font-size: 7px; gap: 2px; }
+            #evolution-guide { height: 33px; gap: 1px; }
+            .guide-circle { flex-basis: 5px; width: 5px; height: 5px; min-width: 5px; min-height: 5px; }
+            #sound-toggle, #restart-game { height: 32px; font-size: 8px; padding: 0 1px; }
         }
         @media (max-width: 700px) and (orientation: landscape) {
-            #ui-top { padding: 4px 8px 5px; gap: 5px; }
-            .score-box { min-height: 35px; padding: 2px 5px; font-size: 9px; border-radius: 9px; }
-            .score-box span { font-size: 14px; }
+            #ui-top { padding: 3px 7px 4px; gap: 3px; }
+            .score-box { min-height: 33px; padding: 2px 4px; font-size: 8px; }
+            #score-box { min-height: 36px; }
+            #score-box span { font-size: 16px; }
+            #best-box span { font-size: 12px; }
             .next-hint { font-size: 7px; }
-            #evolution-guide { height: 25px; gap: 3px; padding: 1px 3px; }
-            .guide-circle { width: 9px !important; height: 9px !important; min-width: 9px; min-height: 9px; flex-basis: 9px; }
-            #sound-toggle, #restart-game { height: 30px; padding: 0 7px; font-size: 9px; border-radius: 8px; }
+            #evolution-guide { height: 27px; }
+            #sound-toggle, #restart-game { height: 28px; font-size: 8px; }
             #game-container { width: min(98%, 900px); margin-bottom: 3px; border-radius: 0 0 14px 14px; }
         }
-        @media (max-width: 390px) and (orientation: portrait) {
-            #ui-top { padding: 7px 7px 6px; gap: 5px; grid-template-columns: minmax(0,1fr) minmax(0,1fr) auto auto; }
-            .score-box { min-height: 43px; padding: 4px 5px; font-size: 9px; }
-            .score-box span { font-size: 16px; }
-            #evolution-guide { height: 29px; gap: 2px; padding: 1px 2px; }
-            #sound-toggle, #restart-game { height: 33px; padding: 0 6px; font-size: 9px; }
-        }
     </style>
+
 </head>
 <body>
 <div id="ui-top">
-    <div class="score-box">得分<span id="score">0</span></div>
+    <div class="score-box" id="score-box">得分<span id="score">0</span><div class="next-hint">NEXT <div id="next-dot"></div></div></div>
+    <div class="score-box" id="best-box">最高<span id="highscore">0</span></div>
     <div id="evolution-guide"></div>
-    <div class="score-box">最高<span id="highscore">0</span><div class="next-hint">NEXT <div id="next-dot"></div></div></div>
     <button id="sound-toggle" type="button" aria-label="切換遊戲音效" title="合成與掉落音效開關">🔊 音效</button>
     <button id="restart-game" type="button" aria-label="重新開始遊戲" onclick="startNewGame()">↻ 重來</button>
 </div>
@@ -144,7 +192,7 @@ function init() {
     const ch = savedViewport ? savedViewport.height : Math.max(1, container.clientHeight);
     render = Render.create({
         element: container, engine: engine,
-        options: { width: cw, height: ch, wireframes: false, background: 'transparent', pixelRatio: window.devicePixelRatio || 1 }
+        options: { width: cw, height: ch, wireframes: false, background: 'transparent', pixelRatio: Math.min(window.devicePixelRatio || 1, 2) }
     });
     rebuildWalls(cw, ch);
     Render.run(render);
@@ -159,7 +207,7 @@ function init() {
         saveGame();
     }
 
-    setInterval(() => { if (!skipSaveOnUnload) saveGame(); }, 500);
+    setInterval(() => { if (!skipSaveOnUnload) saveGame(); }, 1500);
     const safeSave = () => { if (!skipSaveOnUnload) saveGame(); };
     window.addEventListener('beforeunload', safeSave);
     window.addEventListener('pagehide', safeSave);
@@ -208,7 +256,7 @@ function saveGame() {
     if (!engine || !render) return;
 
     try {
-        const bodies = Composite.allBodies(engine.world)
+        const bodies = engine.world.bodies
             .filter(body => body.label && body.label.startsWith('jelly_'))
             .map(body => ({
                 level: body.level,
@@ -271,11 +319,12 @@ function loadGame() {
             if (!Number.isInteger(saved.level) || !jellyConfigs[saved.level]) return;
 
             const body = Bodies.circle(
-                Number(saved.x) || render.canvas.width / 2,
+                Number(saved.x) || render.options.width / 2,
                 Number(saved.y) || SPAWN_Y,
                 jellyConfigs[saved.level].r,
                 {
                     isStatic: Boolean(saved.isStatic),
+                    render: { visible: false },
                     label: 'jelly_' + saved.level,
                     restitution: 0.1,
                     friction: 0.9
@@ -342,10 +391,10 @@ function createGuide() {
 
 function spawnNew() {
     if (isGameOver) return;
-    const cw = render.canvas.width;
+    const cw = render.options.width;
     const level = nextLevel;
     currentJelly = Bodies.circle(cw/2, SPAWN_Y, jellyConfigs[level].r, {
-        isStatic: true, label: 'jelly_' + level, restitution: 0.1, friction: 0.9
+        isStatic: true, label: 'jelly_' + level, restitution: 0.1, friction: 0.9, render: { visible: false }
     });
     currentJelly.level = level;
     Composite.add(engine.world, currentJelly);
@@ -407,13 +456,12 @@ function setupEvents() {
                         if (soundEnabled) playGameSfx(mergeSound);
                         const nextLvl = lvl + 1;
                         const newJelly = Bodies.circle(midX, midY, jellyConfigs[nextLvl].r, {
-                            label: 'jelly_' + nextLvl, restitution: 0.1, friction: 0.9
+                            label: 'jelly_' + nextLvl, restitution: 0.1, friction: 0.9, render: { visible: false }
                         });
                         newJelly.level = nextLvl;
                         Composite.add(engine.world, newJelly);
                         score += (lvl + 1) * 8;
                         document.getElementById('score').innerText = score;
-                        saveGame();
                         if (score > highscore) {
                             highscore = score;
                             document.getElementById('highscore').innerText = highscore;
@@ -427,7 +475,7 @@ function setupEvents() {
     });
 
     Events.on(engine, 'afterUpdate', () => {
-        Composite.allBodies(engine.world).forEach(body => {
+        engine.world.bodies.forEach(body => {
             if (!body.isStatic && body.position.y < DEADLINE_Y && body !== currentJelly) {
                 if (Math.abs(body.velocity.y) < 0.01) {
                     isGameOver = true;
@@ -443,14 +491,14 @@ function setupEvents() {
 function drawLoop() {
     Events.on(render, 'afterRender', () => {
         const ctx = render.context;
-        const bodies = Composite.allBodies(engine.world);
+        const bodies = engine.world.bodies;
         
         if (currentJelly && currentJelly.isStatic) {
             ctx.save();
             ctx.beginPath();
             ctx.setLineDash([6, 6]);
             ctx.moveTo(currentJelly.position.x, currentJelly.position.y + jellyConfigs[currentJelly.level].r);
-            ctx.lineTo(currentJelly.position.x, render.canvas.height);
+            ctx.lineTo(currentJelly.position.x, render.options.height);
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
             ctx.lineWidth = 1;
             ctx.stroke();
@@ -485,7 +533,7 @@ function drawLoop() {
         ctx.beginPath(); 
         ctx.setLineDash([15, 10]); 
         ctx.moveTo(0, DEADLINE_Y);
-        ctx.lineTo(render.canvas.width, DEADLINE_Y); 
+        ctx.lineTo(render.options.width, DEADLINE_Y); 
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)'; 
         ctx.lineWidth = 4;
         ctx.stroke(); 
