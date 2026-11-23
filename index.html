@@ -131,35 +131,31 @@ const SPAWN_Y = 30;
 function startAmbientMusic() {
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     if (!AudioCtx) return;
+
     if (!musicContext) {
         musicContext = new AudioCtx();
         const master = musicContext.createGain();
-        master.gain.value = 0.025;
+        master.gain.value = 0.018;
         master.connect(musicContext.destination);
-        musicNodes = [master];
-        const notes = [261.63, 329.63, 392.00, 329.63, 293.66, 349.23, 440.00, 349.23];
-        let noteIndex = 0;
-        const playNote = () => {
-            if (!musicEnabled || !musicContext) return;
+
+        // 原本柔和、緩慢的水下環境和弦；不是旋律音樂。
+        [130.81, 164.81, 196.00, 261.63].forEach((frequency, index) => {
             const osc = musicContext.createOscillator();
-            const env = musicContext.createGain();
-            const now = musicContext.currentTime;
-            osc.type = 'sine';
-            osc.frequency.value = notes[noteIndex % notes.length];
-            env.gain.setValueAtTime(0.0001, now);
-            env.gain.exponentialRampToValueAtTime(0.22, now + 0.12);
-            env.gain.exponentialRampToValueAtTime(0.0001, now + 0.85);
-            osc.connect(env);
-            env.connect(master);
-            osc.start(now);
-            osc.stop(now + 0.9);
-            noteIndex++;
-        };
-        musicContext.__musicTimer = window.setInterval(playNote, 900);
-        playNote();
+            const gain = musicContext.createGain();
+            osc.type = index === 0 ? 'sine' : 'triangle';
+            osc.frequency.value = frequency;
+            gain.gain.value = index === 0 ? 0.34 : 0.16;
+            osc.connect(gain);
+            gain.connect(master);
+            osc.start();
+            musicNodes.push(osc, gain);
+        });
+        musicNodes.push(master);
     }
+
     musicContext.resume().catch(() => {});
 }
+
 function stopAmbientMusic() {
     if (!musicContext) return;
     if (musicContext.__musicTimer) {
@@ -541,7 +537,9 @@ function updateMusicButton() {
     musicToggle.classList.toggle('off', !musicEnabled);
     musicToggle.title = musicEnabled ? '背景音樂開啟' : '背景音樂關閉';
 }
-soundToggle.addEventListener('click', () => {
+soundToggle.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
     soundEnabled = !soundEnabled;
     localStorage.setItem('jellySoundEnabled', String(soundEnabled));
     updateSoundButton();
@@ -552,7 +550,9 @@ soundToggle.addEventListener('click', () => {
         dropSound.currentTime = 0;
     }
 });
-musicToggle.addEventListener('click', () => {
+musicToggle.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
     musicEnabled = !musicEnabled;
     localStorage.setItem('jellyMusicEnabled', String(musicEnabled));
     updateMusicButton();
