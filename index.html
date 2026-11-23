@@ -19,8 +19,8 @@
         body { margin: 0; background: #000b14; font-family: 'Arial Rounded MT Bold', sans-serif; overflow: hidden; display: flex; flex-direction: column; align-items: center; height: 100vh; height: 100dvh; min-height: 0; touch-action: none; }
         #ui-top {
             width: 100%; max-width: 600px; box-sizing: border-box;
-            display: grid; grid-template-columns: minmax(58px,.8fr) minmax(0,1.7fr) minmax(76px,1fr) auto;
-            grid-template-areas: "score guide best sound";
+            display: grid; grid-template-columns: minmax(52px,.75fr) minmax(0,1.55fr) minmax(70px,1fr) auto auto;
+            grid-template-areas: "score guide best sound restart";
             align-items: center; gap: 5px; padding: 4px 7px;
             z-index: 10; flex-shrink: 0;
         }
@@ -56,21 +56,29 @@
             white-space: nowrap; color: #dceaf4;
         }
         #sound-toggle.off { opacity: .62; }
+        #restart-game {
+            grid-area: restart; align-self: center; margin: 0; min-width: 43px;
+            height: 36px; padding: 0 6px; border-radius: 10px; font-size: 10px;
+            background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.16);
+            white-space: nowrap; color: #dceaf4;
+        }
         @media (max-width: 700px) and (orientation: landscape) {
-            #ui-top { padding: 2px 6px; gap: 4px; grid-template-columns: minmax(48px,.8fr) minmax(0,1.7fr) minmax(66px,1fr) auto; }
+            #ui-top { padding: 2px 6px; gap: 4px; grid-template-columns: minmax(44px,.75fr) minmax(0,1.55fr) minmax(62px,1fr) auto auto; }
             .score-box { min-height: 32px; padding: 2px 4px; font-size: 9px; border-radius: 8px; }
             .score-box span { font-size: 13px; }
             .next-hint { font-size: 7px; }
             #evolution-guide { height: 24px; gap: 1px; padding: 1px 2px; }
-            #sound-toggle { min-width: 43px; height: 29px; padding: 0 5px; font-size: 9px; border-radius: 8px; }
+            #sound-toggle { min-width: 40px; height: 29px; padding: 0 4px; font-size: 9px; border-radius: 8px; }
+            #restart-game { min-width: 37px; height: 29px; padding: 0 4px; font-size: 9px; border-radius: 8px; }
             #game-container { width: min(98%, 900px); margin-bottom: 3px; border-radius: 0 0 14px 14px; }
         }
         @media (max-width: 390px) and (orientation: portrait) {
-            #ui-top { padding: 3px 5px; gap: 3px; grid-template-columns: minmax(48px,.8fr) minmax(0,1.65fr) minmax(65px,1fr) auto; }
+            #ui-top { padding: 3px 5px; gap: 3px; grid-template-columns: minmax(42px,.75fr) minmax(0,1.5fr) minmax(58px,1fr) auto auto; }
             .score-box { min-height: 36px; padding: 2px 3px; }
             .score-box span { font-size: 14px; }
             #evolution-guide { height: 26px; gap: 1px; padding: 1px; }
-            #sound-toggle { min-width: 42px; height: 32px; padding: 0 4px; font-size: 9px; }
+            #sound-toggle { min-width: 39px; height: 32px; padding: 0 3px; font-size: 9px; }
+            #restart-game { min-width: 36px; height: 32px; padding: 0 3px; font-size: 9px; }
         }
     </style>
 </head>
@@ -80,6 +88,7 @@
     <div id="evolution-guide"></div>
     <div class="score-box">最高<span id="highscore">0</span><div class="next-hint">NEXT <div id="next-dot"></div></div></div>
     <button id="sound-toggle" type="button" aria-label="切換遊戲音效">🔊 音效開</button>
+    <button id="restart-game" type="button" aria-label="重新開始遊戲" onclick="startNewGame()">↻ 重來</button>
 </div>
 <div id="game-container">
     <div id="game-over"><h2>滿出來了！</h2><p>得分: <span id="final-score">0</span></p><button onclick="startNewGame()">重新挑戰</button></div>
@@ -117,8 +126,9 @@ function init() {
     createGuide();
     const container = document.getElementById('game-container');
     engine = Engine.create();
-    const cw = Math.max(1, container.clientWidth);
-    const ch = Math.max(1, container.clientHeight);
+    const savedViewport = getSavedViewport();
+    const cw = savedViewport ? savedViewport.width : Math.max(1, container.clientWidth);
+    const ch = savedViewport ? savedViewport.height : Math.max(1, container.clientHeight);
     render = Render.create({
         element: container, engine: engine,
         options: { width: cw, height: ch, wireframes: false, background: 'transparent', pixelRatio: window.devicePixelRatio || 1 }
@@ -164,27 +174,9 @@ function rebuildWalls(cw, ch) {
 }
 
 function resizeGame() {
-    if (!engine || !render) return;
-    const container = document.getElementById('game-container');
-    const oldW = render.options.width || render.canvas.width;
-    const oldH = render.options.height || render.canvas.height;
-    const newW = Math.max(1, container.clientWidth);
-    const newH = Math.max(1, container.clientHeight);
-    if (Math.abs(oldW - newW) < 2 && Math.abs(oldH - newH) < 2) return;
-    const sx = newW / oldW;
-    const sy = newH / oldH;
-    Composite.allBodies(engine.world).forEach(body => {
-        if (wallBodies.includes(body)) return;
-        Body.setPosition(body, { x: Math.max(0, Math.min(newW, body.position.x * sx)), y: Math.max(0, Math.min(newH + 100, body.position.y * sy)) });
-        Body.setVelocity(body, { x: body.velocity.x * sx, y: body.velocity.y * sy });
-    });
-    Render.setSize(render, newW, newH);
-    render.options.pixelRatio = window.devicePixelRatio || 1;
-    rebuildWalls(newW, newH);
-    if (currentJelly) {
-        const r = jellyConfigs[currentJelly.level].r;
-        Body.setPosition(currentJelly, { x: Math.max(r, Math.min(newW - r, currentJelly.position.x)), y: SPAWN_Y });
-    }
+    // 僅讓 canvas 隨螢幕容器縮放顯示，不改變 Matter.js 世界尺寸、
+    // 水母座標、半徑或速度。轉回原方向時，畫面與物理狀態都維持原樣。
+    if (!render) return;
     saveGame();
 }
 
@@ -217,6 +209,8 @@ function saveGame() {
             }));
 
         const saveData = {
+            worldWidth: render.options.width,
+            worldHeight: render.options.height,
             score,
             nextLevel,
             isGameOver,
@@ -231,6 +225,19 @@ function saveGame() {
 }
 
 // 讀取上次的遊戲進度
+function getSavedViewport() {
+    try {
+        const raw = localStorage.getItem(SAVE_KEY);
+        if (!raw) return null;
+        const data = JSON.parse(raw);
+        if (Number.isFinite(data.worldWidth) && data.worldWidth > 0 &&
+            Number.isFinite(data.worldHeight) && data.worldHeight > 0) {
+            return { width: data.worldWidth, height: data.worldHeight };
+        }
+    } catch (e) {}
+    return null;
+}
+
 function loadGame() {
     try {
         const raw = localStorage.getItem(SAVE_KEY);
@@ -301,6 +308,8 @@ function loadGame() {
 
 // 「重新挑戰」才會清除目前進度；單純關閉/重新整理不會清除。
 function startNewGame() {
+    const confirmed = window.confirm('確定要重新開始嗎？\n目前這一局的水母位置與分數都會清除，且無法復原。');
+    if (!confirmed) return;
     skipSaveOnUnload = true;
     localStorage.removeItem(SAVE_KEY);
     location.reload();
@@ -339,9 +348,9 @@ function setupEvents() {
     const updatePos = (clientX) => {
         if (!currentJelly || isGameOver) return;
         const rect = canvas.getBoundingClientRect();
-        const x = clientX - rect.left;
+        const x = (clientX - rect.left) * (render.options.width / rect.width);
         const r = jellyConfigs[currentJelly.level].r;
-        const cw = canvas.width;
+        const cw = render.options.width;
         Body.setPosition(currentJelly, { x: Math.max(r, Math.min(cw - r, x)), y: SPAWN_Y });
     };
     const handleStart = (e) => {
