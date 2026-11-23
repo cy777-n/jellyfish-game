@@ -19,8 +19,8 @@
         body { margin: 0; background: #000b14; font-family: 'Arial Rounded MT Bold', sans-serif; overflow: hidden; display: flex; flex-direction: column; align-items: center; height: 100vh; height: 100dvh; min-height: 0; touch-action: none; }
         #ui-top {
             width: 100%; max-width: 600px; box-sizing: border-box;
-            display: grid; grid-template-columns: minmax(52px,.75fr) minmax(0,1.55fr) minmax(70px,1fr) auto auto;
-            grid-template-areas: "score guide best sound restart";
+            display: grid; grid-template-columns: 42px minmax(70px,1fr) 62px 30px 30px 36px;
+            grid-template-areas: "score guide best music sound restart";
             align-items: center; gap: 5px; padding: 4px 7px;
             z-index: 10; flex-shrink: 0;
         }
@@ -43,19 +43,21 @@
             background: rgba(255,255,255,.045); border-radius: 9px;
             border: 1px solid rgba(255,255,255,.08);
         }
-        .guide-circle { border-radius: 50%; margin: 0; flex: 0 1 auto; border: 1px solid rgba(255,255,255,.88); }
+        .guide-circle { display: block; border-radius: 50%; margin: 0; flex: 0 0 7px; width: 7px; height: 7px; min-width: 7px; min-height: 7px; box-sizing: border-box; border: 1px solid rgba(255,255,255,.92); }
         .guide-arrow { display: none; }
         #game-container { width: 98%; max-width: 550px; min-height: 0; flex-grow: 1; position: relative; border: 3px solid #4fc3f7; border-top: none; border-radius: 0 0 25px 25px; background: linear-gradient(to bottom, #001a2e, #000b14); box-shadow: 0 5px 20px rgba(0,0,0,0.8); margin-bottom: 10px; overflow: hidden; }
         canvas { display: block; width: 100% !important; height: 100% !important; }
         #game-over { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(255, 255, 255, 0.95); padding: 25px; border-radius: 20px; text-align: center; display: none; z-index: 100; width: 200px; }
         button { background: #ff4081; border: none; color: white; padding: 10px 20px; border-radius: 40px; font-weight: bold; cursor: pointer; margin-top: 15px; }
-#sound-toggle {
-            grid-area: sound; align-self: center; margin: 0; min-width: 48px;
-            height: 36px; padding: 0 7px; border-radius: 10px; font-size: 10px;
+#sound-toggle, #music-toggle {
+            align-self: center; margin: 0; min-width: 0; width: 30px;
+            height: 36px; padding: 0; border-radius: 9px; font-size: 15px;
             background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.16);
-            white-space: nowrap; color: #dceaf4;
+            color: #dceaf4; display: flex; align-items: center; justify-content: center;
         }
-        #sound-toggle.off { opacity: .62; }
+        #sound-toggle { grid-area: sound; }
+        #music-toggle { grid-area: music; }
+        #sound-toggle.off, #music-toggle.off { opacity: .48; }
         #restart-game {
             grid-area: restart; align-self: center; margin: 0; min-width: 43px;
             height: 36px; padding: 0 6px; border-radius: 10px; font-size: 10px;
@@ -63,21 +65,23 @@
             white-space: nowrap; color: #dceaf4;
         }
         @media (max-width: 700px) and (orientation: landscape) {
-            #ui-top { padding: 2px 6px; gap: 4px; grid-template-columns: minmax(44px,.75fr) minmax(0,1.55fr) minmax(62px,1fr) auto auto; }
+            #ui-top { padding: 2px 6px; gap: 4px; grid-template-columns: 40px minmax(62px,1fr) 58px 28px 28px 33px; }
             .score-box { min-height: 32px; padding: 2px 4px; font-size: 9px; border-radius: 8px; }
             .score-box span { font-size: 13px; }
             .next-hint { font-size: 7px; }
             #evolution-guide { height: 24px; gap: 1px; padding: 1px 2px; }
-            #sound-toggle { min-width: 40px; height: 29px; padding: 0 4px; font-size: 9px; border-radius: 8px; }
+            .guide-circle { flex-basis: 6px; width: 6px; height: 6px; min-width: 6px; min-height: 6px; }
+            #sound-toggle, #music-toggle { width: 28px; height: 29px; font-size: 13px; border-radius: 8px; }
             #restart-game { min-width: 37px; height: 29px; padding: 0 4px; font-size: 9px; border-radius: 8px; }
             #game-container { width: min(98%, 900px); margin-bottom: 3px; border-radius: 0 0 14px 14px; }
         }
         @media (max-width: 390px) and (orientation: portrait) {
-            #ui-top { padding: 3px 5px; gap: 3px; grid-template-columns: minmax(42px,.75fr) minmax(0,1.5fr) minmax(58px,1fr) auto auto; }
+            #ui-top { padding: 3px 5px; gap: 3px; grid-template-columns: 38px minmax(58px,1fr) 55px 27px 27px 31px; }
             .score-box { min-height: 36px; padding: 2px 3px; }
             .score-box span { font-size: 14px; }
             #evolution-guide { height: 26px; gap: 1px; padding: 1px; }
-            #sound-toggle { min-width: 39px; height: 32px; padding: 0 3px; font-size: 9px; }
+            .guide-circle { flex-basis: 5px; width: 5px; height: 5px; min-width: 5px; min-height: 5px; }
+            #sound-toggle, #music-toggle { width: 27px; height: 32px; font-size: 12px; }
             #restart-game { min-width: 36px; height: 32px; padding: 0 3px; font-size: 9px; }
         }
     </style>
@@ -87,7 +91,8 @@
     <div class="score-box">得分<span id="score">0</span></div>
     <div id="evolution-guide"></div>
     <div class="score-box">最高<span id="highscore">0</span><div class="next-hint">NEXT <div id="next-dot"></div></div></div>
-    <button id="sound-toggle" type="button" aria-label="切換遊戲音效">🔊 音效開</button>
+    <button id="music-toggle" type="button" aria-label="切換背景音樂" title="背景音樂">♫</button>
+    <button id="sound-toggle" type="button" aria-label="切換遊戲音效" title="合成與掉落音效">🔊</button>
     <button id="restart-game" type="button" aria-label="重新開始遊戲" onclick="startNewGame()">↻ 重來</button>
 </div>
 <div id="game-container">
@@ -98,6 +103,9 @@ const { Engine, Render, Runner, Bodies, Composite, Events, Body } = Matter;
 const mergeSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2020/2020-preview.mp3');
 const dropSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2004/2004-preview.mp3');
 let soundEnabled = localStorage.getItem('jellySoundEnabled') !== 'false';
+let musicEnabled = localStorage.getItem('jellyMusicEnabled') === 'true';
+let musicContext = null;
+let musicNodes = [];
 let engine, render, runner, currentJelly = null, nextLevel = null;
 let wallBodies = [];
 let skipSaveOnUnload = false;
@@ -120,6 +128,37 @@ const jellyConfigs = [
 
 const DEADLINE_Y = 55; 
 const SPAWN_Y = 30;
+
+
+function startAmbientMusic() {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    if (!musicContext) {
+        musicContext = new AudioCtx();
+        const master = musicContext.createGain();
+        master.gain.value = 0.018;
+        master.connect(musicContext.destination);
+        // Soft, slow underwater-style ambient chord made with generated tones.
+        [130.81, 164.81, 196.00, 261.63].forEach((frequency, index) => {
+            const osc = musicContext.createOscillator();
+            const gain = musicContext.createGain();
+            osc.type = index === 0 ? 'sine' : 'triangle';
+            osc.frequency.value = frequency;
+            gain.gain.value = index === 0 ? 0.34 : 0.16;
+            osc.connect(gain);
+            gain.connect(master);
+            osc.start();
+            musicNodes.push(osc, gain);
+        });
+        musicNodes.push(master);
+    }
+    musicContext.resume().catch(() => {});
+}
+
+function stopAmbientMusic() {
+    if (!musicContext) return;
+    musicContext.suspend().catch(() => {});
+}
 
 function init() {
     document.getElementById('highscore').innerText = highscore;
@@ -484,13 +523,21 @@ function drawLoop() {
 }
 init();
 const soundToggle = document.getElementById('sound-toggle');
+const musicToggle = document.getElementById('music-toggle');
+
 function updateSoundButton() {
-    soundToggle.innerText = soundEnabled ? '🔊 音效開' : '🔇 音效關';
+    soundToggle.innerText = soundEnabled ? '🔊' : '🔇';
     soundToggle.classList.toggle('off', !soundEnabled);
+    soundToggle.title = soundEnabled ? '遊戲音效開啟' : '遊戲音效關閉';
+}
+function updateMusicButton() {
+    musicToggle.innerText = musicEnabled ? '♫' : '♪';
+    musicToggle.classList.toggle('off', !musicEnabled);
+    musicToggle.title = musicEnabled ? '背景音樂開啟' : '背景音樂關閉';
 }
 soundToggle.addEventListener('click', () => {
     soundEnabled = !soundEnabled;
-    localStorage.setItem('jellySoundEnabled', soundEnabled);
+    localStorage.setItem('jellySoundEnabled', String(soundEnabled));
     updateSoundButton();
     if (!soundEnabled) {
         mergeSound.pause();
@@ -499,7 +546,27 @@ soundToggle.addEventListener('click', () => {
         dropSound.currentTime = 0;
     }
 });
+musicToggle.addEventListener('click', () => {
+    musicEnabled = !musicEnabled;
+    localStorage.setItem('jellyMusicEnabled', String(musicEnabled));
+    updateMusicButton();
+    if (musicEnabled) startAmbientMusic();
+    else stopAmbientMusic();
+});
 updateSoundButton();
+updateMusicButton();
+
+// If the user previously enabled music, wait for the first real interaction
+// because mobile browsers may block audio until a gesture.
+if (musicEnabled) {
+    const resumeMusicOnGesture = () => {
+        if (musicEnabled) startAmbientMusic();
+        window.removeEventListener('pointerdown', resumeMusicOnGesture);
+        window.removeEventListener('touchstart', resumeMusicOnGesture);
+    };
+    window.addEventListener('pointerdown', resumeMusicOnGesture, { once: true });
+    window.addEventListener('touchstart', resumeMusicOnGesture, { once: true, passive: true });
+}
 
 </script>
 </body>
