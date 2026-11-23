@@ -583,30 +583,22 @@ function drawLoop() {
             const { x, y } = body.position;
             const r = config.r;
             ctx.save(); ctx.translate(x, y); ctx.rotate(body.angle);
-
-            // 恢復最初版本的半圓形裙襬，不再繪製垂直觸手。
-            ctx.beginPath(); ctx.fillStyle = config.color;
-            for (let i = 0; i < 5; i++) {
-                const step = (r * 2) / 5;
-                const tx = -r + (i * step) + step / 2;
-                ctx.arc(tx, r * 0.8, step / 2, 0, Math.PI);
-            }
-            ctx.fill();
-            ctx.strokeStyle = '#FFFFFF';
-            ctx.lineWidth = Math.max(1, r * 0.025);
-            ctx.stroke();
-
             ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2);
             ctx.fillStyle = config.color; ctx.fill();
-            ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = Math.max(1, r * 0.025); ctx.stroke();
+            ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 2; ctx.stroke();
             ctx.beginPath(); ctx.fillStyle = PINK_BLUSH;
             ctx.arc(-r*0.4, r*0.1, r*0.18, 0, Math.PI*2); ctx.arc(r*0.4, r*0.1, r*0.18, 0, Math.PI*2); ctx.fill();
             ctx.fillStyle = '#212121';
             ctx.beginPath(); ctx.arc(-r*0.28, -r*0.1, config.eyeSize, 0, Math.PI*2);
             ctx.arc(r*0.28, -r*0.1, config.eyeSize, 0, Math.PI*2); ctx.fill();
             ctx.beginPath(); ctx.arc(0, r*0.15, r*0.12, 0.2, Math.PI - 0.2);
-            ctx.strokeStyle = '#212121'; ctx.lineWidth = Math.max(0.9, r * 0.015); ctx.stroke();
-            ctx.restore();
+            ctx.strokeStyle = '#212121'; ctx.lineWidth = 1.2; ctx.stroke();
+            ctx.beginPath(); ctx.fillStyle = config.color;
+            for(let i=0; i<5; i++){
+                const step = (r * 2) / 5; const tx = -r + (i * step) + step/2;
+                ctx.arc(tx, r*0.8, step/2, 0, Math.PI);
+            }
+            ctx.fill(); ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 1; ctx.stroke(); ctx.restore();
         });
         
         ctx.save();
