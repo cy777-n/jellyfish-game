@@ -6,7 +6,7 @@
     <title>水母合成大作戰</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
     <style>
-        body { margin: 0; background: #000b14; font-family: 'Arial Rounded MT Bold', sans-serif; overflow: hidden; display: flex; flex-direction: column; align-items: center; height: 100vh; height: -webkit-fill-available; touch-action: none; }
+        body { margin: 0; background: #000b14; font-family: 'Arial Rounded MT Bold', sans-serif; overflow: hidden; display: flex; flex-direction: column; align-items: center; height: 100vh; height: 100dvh; min-height: 0; touch-action: none; }
         #ui-top { width: 100%; max-width: 600px; display: flex; justify-content: space-between; align-items: center; padding: 8px 15px; box-sizing: border-box; z-index: 10; flex-shrink: 0; }
         .score-box { color: #fff; font-size: 12px; background: rgba(255, 255, 255, 0.1); padding: 4px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); text-align: center; min-width: 70px; backdrop-filter: blur(5px); }
         .score-box span { display: block; font-size: 16px; font-weight: bold; }
@@ -15,14 +15,21 @@
         #evolution-guide { display: flex; justify-content: center; align-items: center; background: rgba(255, 255, 255, 0.08); padding: 6px 10px; border-radius: 12px; flex-wrap: wrap; max-width: 50%; border: 1px solid rgba(255,255,255,0.1); }
         .guide-circle { border-radius: 50%; margin: 2px; border: 1px solid #fff; }
         .guide-arrow { color: rgba(255,255,255,0.3); font-size: 8px; margin: 0 1px; }
-        #game-container { width: 98%; max-width: 550px; flex-grow: 1; position: relative; border: 3px solid #4fc3f7; border-top: none; border-radius: 0 0 25px 25px; background: linear-gradient(to bottom, #001a2e, #000b14); box-shadow: 0 5px 20px rgba(0,0,0,0.8); margin-bottom: 10px; overflow: hidden; }
+        #game-container { width: 98%; max-width: 550px; min-height: 0; flex-grow: 1; position: relative; border: 3px solid #4fc3f7; border-top: none; border-radius: 0 0 25px 25px; background: linear-gradient(to bottom, #001a2e, #000b14); box-shadow: 0 5px 20px rgba(0,0,0,0.8); margin-bottom: 10px; overflow: hidden; }
         canvas { display: block; width: 100% !important; height: 100% !important; }
-        #audio-controls { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); z-index: 20; display: flex; gap: 6px; }
-        .audio-btn { margin: 0; padding: 5px 9px; border-radius: 12px; font-size: 10px; font-weight: bold; background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.22); color: rgba(255,255,255,0.9); backdrop-filter: blur(5px); cursor: pointer; }
-        .audio-btn.off { background: rgba(0,0,0,0.28); color: rgba(255,255,255,0.45); border-color: rgba(255,255,255,0.12); }
-        .audio-btn:active { transform: scale(0.96); }
         #game-over { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(255, 255, 255, 0.95); padding: 25px; border-radius: 20px; text-align: center; display: none; z-index: 100; width: 200px; }
         button { background: #ff4081; border: none; color: white; padding: 10px 20px; border-radius: 40px; font-weight: bold; cursor: pointer; margin-top: 15px; }
+#sound-toggle { margin-top: 0; padding: 6px 9px; font-size: 11px; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2); white-space: nowrap; }
+#sound-toggle.off { opacity: 0.65; }
+        @media (max-width: 700px) and (orientation: landscape) {
+            #ui-top { padding: 4px 8px; gap: 5px; }
+            .score-box { min-width: 48px; padding: 3px 6px; font-size: 10px; }
+            .score-box span { font-size: 13px; }
+            #evolution-guide { max-width: 42%; padding: 3px 5px; }
+            .guide-circle { margin: 1px; }
+            #sound-toggle { padding: 5px 7px; font-size: 10px; }
+            #game-container { width: min(98%, 900px); margin-bottom: 4px; border-radius: 0 0 14px 14px; }
+        }
     </style>
 </head>
 <body>
@@ -30,32 +37,19 @@
     <div class="score-box">得分<span id="score">0</span></div>
     <div id="evolution-guide"></div>
     <div class="score-box">最高<span id="highscore">0</span><div class="next-hint">NEXT <div id="next-dot"></div></div></div>
+    <button id="sound-toggle" type="button" aria-label="切換遊戲音效">🔊 音效開</button>
 </div>
 <div id="game-container">
-    <div id="audio-controls">
-        <button id="bgm-toggle" class="audio-btn" type="button">♫ 音樂：開</button>
-        <button id="sfx-toggle" class="audio-btn" type="button">🔔 音效：開</button>
-    </div>
     <div id="game-over"><h2>滿出來了！</h2><p>得分: <span id="final-score">0</span></p><button onclick="startNewGame()">重新挑戰</button></div>
 </div>
 <script>
 const { Engine, Render, Runner, Bodies, Composite, Events, Body } = Matter;
-// 音樂與音效完全分開控制。
-// 遊戲只控制自己的音訊，不會控制、暫停、靜音或改變 Spotify。
 const mergeSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2020/2020-preview.mp3');
 const dropSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2004/2004-preview.mp3');
-
-// 背景音樂使用 Web Audio API 產生，不需要外部音樂檔。
-let musicContext = null;
-let musicGain = null;
-let musicTimer = null;
-let musicStep = 0;
-const musicNotes = [261.63, 329.63, 392.00, 329.63, 293.66, 349.23, 440.00, 349.23];
-
 let soundEnabled = localStorage.getItem('jellySoundEnabled') !== 'false';
-let musicEnabled = localStorage.getItem('jellyMusicEnabled') !== 'false';
-
 let engine, render, runner, currentJelly = null, nextLevel = null;
+let wallBodies = [];
+let skipSaveOnUnload = false;
 let score = 0, isGameOver = false, isTouching = false;
 let highscore = parseInt(localStorage.getItem("jellyHighscore")) || 0;
 
@@ -76,183 +70,80 @@ const jellyConfigs = [
 const DEADLINE_Y = 55; 
 const SPAWN_Y = 30;
 
-function updateAudioButtons() {
-    const musicBtn = document.getElementById('bgm-toggle');
-    const soundBtn = document.getElementById('sfx-toggle');
-
-    musicBtn.innerText = musicEnabled ? '♫ 音樂：開' : '♫ 音樂：關';
-    soundBtn.innerText = soundEnabled ? '🔔 音效：開' : '🔔 音效：關';
-
-    musicBtn.classList.toggle('off', !musicEnabled);
-    soundBtn.classList.toggle('off', !soundEnabled);
-}
-
-function playSound(audio) {
-    if (!soundEnabled) return;
-    try {
-        audio.currentTime = 0;
-        audio.play().catch(() => {});
-    } catch (error) {}
-}
-
-function startBackgroundMusic() {
-    if (!musicEnabled) return;
-
-    try {
-        if (!musicContext) {
-            musicContext = new (window.AudioContext || window.webkitAudioContext)();
-            musicGain = musicContext.createGain();
-            musicGain.gain.value = 0.045;
-            musicGain.connect(musicContext.destination);
-        }
-
-        if (musicContext.state === 'suspended') {
-            musicContext.resume();
-        }
-
-        // 已經在播放就不要重複建立計時器。
-        if (musicTimer) return;
-
-        const playNote = () => {
-            if (!musicContext || !musicGain || !musicEnabled) return;
-
-            const osc = musicContext.createOscillator();
-            const noteGain = musicContext.createGain();
-            const now = musicContext.currentTime;
-            const frequency = musicNotes[musicStep % musicNotes.length];
-
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(frequency, now);
-
-            noteGain.gain.setValueAtTime(0.0001, now);
-            noteGain.gain.exponentialRampToValueAtTime(0.16, now + 0.08);
-            noteGain.gain.exponentialRampToValueAtTime(0.0001, now + 1.40);
-
-            osc.connect(noteGain);
-            noteGain.connect(musicGain);
-            osc.start(now);
-            osc.stop(now + 1.45);
-
-            musicStep++;
-        };
-
-        playNote();
-        musicTimer = setInterval(playNote, 1500);
-    } catch (error) {
-        console.warn('背景音樂無法啟動：', error);
-    }
-}
-
-function stopBackgroundMusic() {
-    // 清除下一個音符的排程。
-    if (musicTimer) {
-        clearInterval(musicTimer);
-        musicTimer = null;
-    }
-
-    // 立即把目前正在響的背景音樂淡出。
-    if (musicGain && musicContext) {
-        try {
-            const now = musicContext.currentTime;
-            musicGain.gain.cancelScheduledValues(now);
-            musicGain.gain.setValueAtTime(musicGain.gain.value || 0.045, now);
-            musicGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.05);
-        } catch (error) {}
-    }
-}
-
-// 只有遊戲本身的互動會啟動背景音樂。
-// 合成音效按鈕絕對不會呼叫這個函式，因此兩套音訊完全分離。
-function startMusicFromGameInteraction() {
-    if (musicEnabled) {
-        startBackgroundMusic();
-    }
-}
-
-function setMusicEnabled(enabled) {
-    musicEnabled = enabled;
-    localStorage.setItem('jellyMusicEnabled', musicEnabled);
-
-    if (musicEnabled) {
-        // 重新開啟時，先恢復 AudioContext，再重新開始旋律。
-        startBackgroundMusic();
-    } else {
-        stopBackgroundMusic();
-    }
-
-    updateAudioButtons();
-}
-
-function setSoundEnabled(enabled) {
-    soundEnabled = enabled;
-    localStorage.setItem('jellySoundEnabled', soundEnabled);
-    updateAudioButtons();
-}
-
-function setupAudioControls() {
-    updateAudioButtons();
-
-    // 🎵 只控制背景音樂
-    document.getElementById('bgm-toggle').addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setMusicEnabled(!musicEnabled);
-    });
-
-    // 🔔 只控制合成音效
-    // 這裡不會啟動/停止背景音樂，也不會修改 musicEnabled。
-    document.getElementById('sfx-toggle').addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setSoundEnabled(!soundEnabled);
-    });
-}
-
 function init() {
     document.getElementById('highscore').innerText = highscore;
-    setupAudioControls();
     createGuide();
     const container = document.getElementById('game-container');
-    const cw = container.clientWidth;
-    const ch = container.clientHeight;
     engine = Engine.create();
+    const cw = Math.max(1, container.clientWidth);
+    const ch = Math.max(1, container.clientHeight);
     render = Render.create({
         element: container, engine: engine,
-        options: { width: cw, height: ch, wireframes: false, background: 'transparent', pixelRatio: window.devicePixelRatio }
+        options: { width: cw, height: ch, wireframes: false, background: 'transparent', pixelRatio: window.devicePixelRatio || 1 }
     });
-    const ground = Bodies.rectangle(cw/2, ch + 20, cw, 40, { isStatic: true });
-    const leftWall = Bodies.rectangle(-20, ch/2, 40, ch, { isStatic: true });
-    const rightWall = Bodies.rectangle(cw + 20, ch/2, 40, ch, { isStatic: true });
-    Composite.add(engine.world, [ground, leftWall, rightWall]);
+    rebuildWalls(cw, ch);
     Render.run(render);
     runner = Runner.create();
     Runner.run(runner, engine);
     setupEvents();
     drawLoop();
 
-    // 優先讀取上次離開時的進度；沒有存檔才開新局
     if (!loadGame()) {
         nextLevel = getRandomLevel();
         spawnNew();
         saveGame();
     }
 
-    // 定期保存，避免關閉分頁時只靠 beforeunload 而漏存
-    setInterval(saveGame, 500);
+    setInterval(() => { if (!skipSaveOnUnload) saveGame(); }, 500);
+    const safeSave = () => { if (!skipSaveOnUnload) saveGame(); };
+    window.addEventListener('beforeunload', safeSave);
+    window.addEventListener('pagehide', safeSave);
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') safeSave();
+    });
 
-    // 關閉分頁、切換 App、重新整理時都盡量保存
-    window.addEventListener("beforeunload", saveGame);
-    window.addEventListener("pagehide", saveGame);
-    document.addEventListener("visibilitychange", () => {
-        if (document.visibilityState === "hidden") saveGame();
+    let resizeTimer;
+    const handleResize = () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(resizeGame, 120);
+    };
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('orientationchange', handleResize);
+    if (window.visualViewport) window.visualViewport.addEventListener('resize', handleResize);
+}
+
+function rebuildWalls(cw, ch) {
+    if (wallBodies.length) Composite.remove(engine.world, wallBodies);
+    const ground = Bodies.rectangle(cw / 2, ch + 20, cw + 80, 40, { isStatic: true, label: 'wall_ground' });
+    const leftWall = Bodies.rectangle(-20, ch / 2, 40, ch + 80, { isStatic: true, label: 'wall_left' });
+    const rightWall = Bodies.rectangle(cw + 20, ch / 2, 40, ch + 80, { isStatic: true, label: 'wall_right' });
+    wallBodies = [ground, leftWall, rightWall];
+    Composite.add(engine.world, wallBodies);
+}
+
+function resizeGame() {
+    if (!engine || !render) return;
+    const container = document.getElementById('game-container');
+    const oldW = render.options.width || render.canvas.width;
+    const oldH = render.options.height || render.canvas.height;
+    const newW = Math.max(1, container.clientWidth);
+    const newH = Math.max(1, container.clientHeight);
+    if (Math.abs(oldW - newW) < 2 && Math.abs(oldH - newH) < 2) return;
+    const sx = newW / oldW;
+    const sy = newH / oldH;
+    Composite.allBodies(engine.world).forEach(body => {
+        if (wallBodies.includes(body)) return;
+        Body.setPosition(body, { x: Math.max(0, Math.min(newW, body.position.x * sx)), y: Math.max(0, Math.min(newH + 100, body.position.y * sy)) });
+        Body.setVelocity(body, { x: body.velocity.x * sx, y: body.velocity.y * sy });
     });
-    window.addEventListener('resize', () => {
-        const cw = container.clientWidth;
-        const ch = container.clientHeight;
-        render.canvas.width = cw;
-        render.canvas.height = ch;
-        Body.setPosition(ground, { x: cw/2, y: ch + 20 });
-    });
+    Render.setSize(render, newW, newH);
+    render.options.pixelRatio = window.devicePixelRatio || 1;
+    rebuildWalls(newW, newH);
+    if (currentJelly) {
+        const r = jellyConfigs[currentJelly.level].r;
+        Body.setPosition(currentJelly, { x: Math.max(r, Math.min(newW - r, currentJelly.position.x)), y: SPAWN_Y });
+    }
+    saveGame();
 }
 
 function getRandomLevel() {
@@ -368,6 +259,7 @@ function loadGame() {
 
 // 「重新挑戰」才會清除目前進度；單純關閉/重新整理不會清除。
 function startNewGame() {
+    skipSaveOnUnload = true;
     localStorage.removeItem(SAVE_KEY);
     location.reload();
 }
@@ -406,11 +298,6 @@ function spawnNew() {
 
 function setupEvents() {
     const canvas = render.canvas;
-
-    document.getElementById('audio-controls').addEventListener('pointerdown', (e) => {
-        e.stopPropagation();
-    });
-
     const updatePos = (clientX) => {
         if (!currentJelly || isGameOver) return;
         const rect = canvas.getBoundingClientRect();
@@ -421,11 +308,6 @@ function setupEvents() {
     };
     const handleStart = (e) => {
         if (isGameOver) return;
-
-        // 玩家真的開始玩遊戲時，才啟動「背景音樂」。
-        // 這與合成音效開關完全無關。
-        startMusicFromGameInteraction();
-
         isTouching = true;
         const x = e.touches ? e.touches[0].clientX : e.clientX;
         updatePos(x);
@@ -440,7 +322,7 @@ function setupEvents() {
         if (!currentJelly || isGameOver || !isTouching) return;
         isTouching = false;
         Body.setStatic(currentJelly, false);
-        playSound(dropSound);
+        if (soundEnabled) { dropSound.currentTime = 0; dropSound.play().catch(()=>{}); }
         currentJelly = null;
         saveGame();
         setTimeout(() => {
@@ -465,7 +347,7 @@ function setupEvents() {
                     const midY = (bodyA.position.y + bodyB.position.y) / 2;
                     if (Composite.get(engine.world, bodyA.id, 'body') && Composite.get(engine.world, bodyB.id, 'body')) {
                         Composite.remove(engine.world, [bodyA, bodyB]);
-                        playSound(mergeSound);
+                        if (soundEnabled) { mergeSound.currentTime = 0; mergeSound.play().catch(()=>{}); }
                         const nextLvl = lvl + 1;
                         const newJelly = Bodies.circle(midX, midY, jellyConfigs[nextLvl].r, {
                             label: 'jelly_' + nextLvl, restitution: 0.1, friction: 0.9
@@ -554,6 +436,24 @@ function drawLoop() {
     });
 }
 init();
+const soundToggle = document.getElementById('sound-toggle');
+function updateSoundButton() {
+    soundToggle.innerText = soundEnabled ? '🔊 音效開' : '🔇 音效關';
+    soundToggle.classList.toggle('off', !soundEnabled);
+}
+soundToggle.addEventListener('click', () => {
+    soundEnabled = !soundEnabled;
+    localStorage.setItem('jellySoundEnabled', soundEnabled);
+    updateSoundButton();
+    if (!soundEnabled) {
+        mergeSound.pause();
+        dropSound.pause();
+        mergeSound.currentTime = 0;
+        dropSound.currentTime = 0;
+    }
+});
+updateSoundButton();
+
 </script>
 </body>
 </html>
