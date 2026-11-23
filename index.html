@@ -226,8 +226,11 @@ function init() {
         saveGame();
     }
 
-    setInterval(() => { if (!skipSaveOnUnload) saveGame(); }, 1500);
-    const safeSave = () => { if (!skipSaveOnUnload) saveGame(); };
+    const safeSave = () => {
+        if (skipSaveOnUnload) return;
+        clearTimeout(gameSaveTimer);
+        saveGame();
+    };
     window.addEventListener('beforeunload', safeSave);
     window.addEventListener('pagehide', safeSave);
     document.addEventListener('visibilitychange', () => {
@@ -276,6 +279,18 @@ function getRandomLevel() {
 
 // 把目前場上的水母、分數、下一顆水母等資訊存到瀏覽器。
 // localStorage 不會因為關閉網頁而消失，因此下次回來可以繼續。
+let gameSaveTimer = null;
+
+// 延後儲存，先讓放開水母的畫面立即更新，避免大量水母存檔時卡住主執行緒。
+function scheduleGameSave() {
+    if (skipSaveOnUnload) return;
+    clearTimeout(gameSaveTimer);
+    gameSaveTimer = setTimeout(() => {
+        gameSaveTimer = null;
+        saveGame();
+    }, 450);
+}
+
 function saveGame() {
     if (!engine || !render) return;
 
@@ -477,7 +492,7 @@ function setupEvents() {
             currentJelly = null;
             Body.setStatic(released, false);
             if (soundEnabled) playGameSfx(dropSound);
-            saveGame();
+            scheduleGameSave();
         }
         isTouching = false;
         activePointerId = null;
@@ -492,7 +507,7 @@ function setupEvents() {
             Body.setStatic(released, false);
             Body.setVelocity(released, { x: 0, y: 0 });
             Body.setAngularVelocity(released, 0);
-            saveGame();
+            scheduleGameSave();
         }
     };
 
@@ -528,7 +543,7 @@ function setupEvents() {
                             document.getElementById('highscore').innerText = highscore;
                             localStorage.setItem("jellyHighscore", highscore);
                         }
-                        saveGame();
+                        scheduleGameSave();
                     }
                 }
             }
