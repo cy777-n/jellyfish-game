@@ -182,7 +182,8 @@ let wallBodies = [];
 let skipSaveOnUnload = false;
 let score = 0, isGameOver = false, isTouching = false;
 const topZoneTimers = new WeakMap();
-const dropGraceUntil = new WeakMap(); // 新放下的水母先給物理引擎時間落下，避免出生位置被誤判為滿出。
+const dropGraceUntil = new WeakMap();
+const hasEnteredPlayfield = new WeakSet(); // 只有確實落進警戒線下方的水母，之後才可觸發滿出判定。
 let highscore = parseInt(localStorage.getItem("jellyHighscore")) || 0;
 
 // 儲存目前遊戲進度用的 key。
@@ -218,10 +219,9 @@ function init() {
     document.getElementById('highscore').innerText = highscore;
     createGuide();
     const container = document.getElementById('game-container');
-    engine = Engine.create({ enableSleeping: true });
-    // Slightly lighter solver settings improve frame consistency on phones/tablets.
-    engine.positionIterations = 5;
-    engine.velocityIterations = 3;
+    // 不啟用 sleeping：避免水母在出生區或低速碰撞時提早休眠。
+    // 使用 Matter.js 預設 solver iterations，避免降低碰撞穩定度。
+    engine = Engine.create();
     const savedViewport = getSavedViewport();
     const cw = savedViewport ? savedViewport.width : Math.max(1, container.clientWidth);
     const ch = savedViewport ? savedViewport.height : Math.max(1, container.clientHeight);
@@ -557,6 +557,8 @@ function setupEvents() {
                 if (lvl < 10) {
                     const midX = (bodyA.position.x + bodyB.position.x) / 2;
                     const midY = (bodyA.position.y + bodyB.position.y) / 2;
+                    const parentsEnteredPlayfield =
+                        hasEnteredPlayfield.has(bodyA) || hasEnteredPlayfield.has(bodyB);
                     if (Composite.get(engine.world, bodyA.id, 'body') && Composite.get(engine.world, bodyB.id, 'body')) {
                         Composite.remove(engine.world, [bodyA, bodyB]);
                         if (soundEnabled) playGameSfx(mergeSound);
@@ -565,6 +567,7 @@ function setupEvents() {
                             label: 'jelly_' + nextLvl, restitution: 0.1, friction: 0.9, render: { visible: false }
                         });
                         newJelly.level = nextLvl;
+                        if (parentsEnteredPlayfield) hasEnteredPlayfield.add(newJelly);
                         Composite.add(engine.world, newJelly);
                         score += (lvl + 1) * 8;
                         document.getElementById('score').innerText = score;
@@ -594,13 +597,25 @@ function setupEvents() {
             }
             if (graceUntil) dropGraceUntil.delete(body);
 
+            const radius = jellyConfigs[body.level]?.r || body.circleRadius || 0;
+
+            // 水母必須先完整落到警戒線下方，才取得滿出判定資格。
+            // 出生點在警戒線上方；若水母卡在出生點，不能因此直接判定遊戲結束。
+            if (body.position.y > DEADLINE_Y + radius) {
+                hasEnteredPlayfield.add(body);
+            }
+            if (!hasEnteredPlayfield.has(body)) {
+                topZoneTimers.delete(body);
+                return;
+            }
+
             const speed = Math.hypot(body.velocity.x, body.velocity.y);
             const isAboveLine = body.position.y < DEADLINE_Y;
             const isSettled = speed < 0.12 && Math.abs(body.angularVelocity) < 0.025;
 
             if (isAboveLine && isSettled) {
                 if (!topZoneTimers.has(body)) topZoneTimers.set(body, now);
-                // 必須持續停在警戒線上方且幾乎靜止 1.2 秒，才判定真正滿出。
+                // 曾經完整進入遊戲區域，之後又被堆回警戒線上方並停穩，才判定滿出。
                 if (now - topZoneTimers.get(body) >= 1200) {
                     isGameOver = true;
                     document.getElementById('game-over').style.display = 'block';
