@@ -180,6 +180,16 @@ let soundEnabled = localStorage.getItem('jellySoundEnabled') !== 'false';
 let engine, render, runner, currentJelly = null, nextLevel = null;
 let wallBodies = [];
 let skipSaveOnUnload = false;
+
+// 使用固定物理步長，並在繪圖時插值，讓手機上的掉落動畫更平順。
+const PHYSICS_STEP = 1000 / 60;
+const MAX_FRAME_DELTA = 50;
+const MAX_PHYSICS_STEPS = 3;
+let physicsAccumulator = 0;
+let lastPhysicsFrame = 0;
+let physicsAlpha = 1;
+let physicsFrameId = 0;
+const jellySprites = [];
 let score = 0, isGameOver = false, isTouching = false;
 const topZoneTimers = new WeakMap();
 const dropGraceUntil = new WeakMap();
@@ -215,6 +225,100 @@ function playGameSfx(audio) {
 }
 
 
+// 將各階水母預先畫成小圖，遊戲進行時只需 drawImage，
+// 避免每一幀、每一顆水母都重新建立大量 Canvas 路徑。
+function buildJellySprites() {
+    jellyConfigs.forEach((config, level) => {
+        const r = config.r;
+        const pad = 3;
+        const size = Math.ceil(r * 2 + pad * 2);
+        const sprite = document.createElement('canvas');
+        sprite.width = size;
+        sprite.height = size;
+        const ctx = sprite.getContext('2d');
+        const cx = size / 2;
+        const cy = size / 2;
+
+        ctx.translate(cx, cy);
+        ctx.beginPath();
+        ctx.arc(0, 0, r, 0, Math.PI * 2);
+        ctx.fillStyle = config.color;
+        ctx.fill();
+        ctx.strokeStyle = '#FFFFFF';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.fillStyle = PINK_BLUSH;
+        ctx.arc(-r * 0.4, r * 0.1, r * 0.18, 0, Math.PI * 2);
+        ctx.arc(r * 0.4, r * 0.1, r * 0.18, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#212121';
+        ctx.beginPath();
+        ctx.arc(-r * 0.28, -r * 0.1, config.eyeSize, 0, Math.PI * 2);
+        ctx.arc(r * 0.28, -r * 0.1, config.eyeSize, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(0, r * 0.15, r * 0.12, 0.2, Math.PI - 0.2);
+        ctx.strokeStyle = '#212121';
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.fillStyle = config.color;
+        for (let i = 0; i < 5; i++) {
+            const step = (r * 2) / 5;
+            const tx = -r + (i * step) + step / 2;
+            ctx.arc(tx, r * 0.8, step / 2, 0, Math.PI);
+        }
+        ctx.fill();
+        ctx.strokeStyle = '#FFFFFF';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        jellySprites[level] = { canvas: sprite, size, offset: size / 2 };
+    });
+}
+
+// 固定 60Hz 更新物理世界；畫面仍由 Matter.Render 的 RAF 繪製。
+// 每次畫面更新最多補算 3 步，避免手機掉幀後陷入大量追趕而越跑越卡。
+function startPhysicsLoop() {
+    if (physicsFrameId) cancelAnimationFrame(physicsFrameId);
+    physicsAccumulator = 0;
+    lastPhysicsFrame = 0;
+
+    const tick = (timestamp) => {
+        physicsFrameId = requestAnimationFrame(tick);
+        if (document.hidden) {
+            lastPhysicsFrame = timestamp;
+            physicsAccumulator = 0;
+            physicsAlpha = 1;
+            return;
+        }
+
+        if (!lastPhysicsFrame) lastPhysicsFrame = timestamp;
+        const frameDelta = Math.min(timestamp - lastPhysicsFrame, MAX_FRAME_DELTA);
+        lastPhysicsFrame = timestamp;
+        physicsAccumulator = Math.min(
+            physicsAccumulator + frameDelta,
+            PHYSICS_STEP * MAX_PHYSICS_STEPS
+        );
+
+        let steps = 0;
+        while (physicsAccumulator >= PHYSICS_STEP && steps < MAX_PHYSICS_STEPS) {
+            Engine.update(engine, PHYSICS_STEP);
+            physicsAccumulator -= PHYSICS_STEP;
+            steps++;
+        }
+        physicsAlpha = physicsAccumulator / PHYSICS_STEP;
+    };
+
+    physicsFrameId = requestAnimationFrame(tick);
+}
+
+
 function init() {
     document.getElementById('highscore').innerText = highscore;
     createGuide();
@@ -222,17 +326,19 @@ function init() {
     // 不啟用 sleeping：避免水母在出生區或低速碰撞時提早休眠。
     // 使用 Matter.js 預設 solver iterations，避免降低碰撞穩定度。
     engine = Engine.create();
+    buildJellySprites();
     const savedViewport = getSavedViewport();
     const cw = savedViewport ? savedViewport.width : Math.max(1, container.clientWidth);
     const ch = savedViewport ? savedViewport.height : Math.max(1, container.clientHeight);
     render = Render.create({
         element: container, engine: engine,
-        options: { width: cw, height: ch, wireframes: false, background: 'transparent', pixelRatio: Math.min(window.devicePixelRatio || 1, 1.5) }
+        options: { width: cw, height: ch, wireframes: false, background: 'transparent', pixelRatio: Math.min(window.devicePixelRatio || 1, 1.25) }
     });
     rebuildWalls(cw, ch);
     Render.run(render);
-    runner = Runner.create();
-    Runner.run(runner, engine);
+    // 不再讓 Runner 與 Render 各自決定物理更新頻率，改用固定步長。
+    runner = null;
+    startPhysicsLoop();
     setupEvents();
     drawLoop();
 
@@ -250,7 +356,12 @@ function init() {
     window.addEventListener('beforeunload', safeSave);
     window.addEventListener('pagehide', safeSave);
     document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'hidden') safeSave();
+        if (document.visibilityState === 'hidden') {
+            safeSave();
+        } else {
+            lastPhysicsFrame = 0;
+            physicsAccumulator = 0;
+        }
     });
 
     let resizeTimer;
@@ -633,7 +744,7 @@ function drawLoop() {
     Events.on(render, 'afterRender', () => {
         const ctx = render.context;
         const bodies = engine.world.bodies;
-        
+
         if (currentJelly && currentJelly.isStatic) {
             ctx.save();
             ctx.beginPath();
@@ -646,41 +757,41 @@ function drawLoop() {
             ctx.restore();
         }
 
-        bodies.forEach(body => {
-            if (!body.label || !body.label.startsWith('jelly_')) return;
-            const config = jellyConfigs[body.level];
-            const { x, y } = body.position;
-            const r = config.r;
-            ctx.save(); ctx.translate(x, y); ctx.rotate(body.angle);
-            ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2);
-            ctx.fillStyle = config.color; ctx.fill();
-            ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 2; ctx.stroke();
-            ctx.beginPath(); ctx.fillStyle = PINK_BLUSH;
-            ctx.arc(-r*0.4, r*0.1, r*0.18, 0, Math.PI*2); ctx.arc(r*0.4, r*0.1, r*0.18, 0, Math.PI*2); ctx.fill();
-            ctx.fillStyle = '#212121';
-            ctx.beginPath(); ctx.arc(-r*0.28, -r*0.1, config.eyeSize, 0, Math.PI*2);
-            ctx.arc(r*0.28, -r*0.1, config.eyeSize, 0, Math.PI*2); ctx.fill();
-            ctx.beginPath(); ctx.arc(0, r*0.15, r*0.12, 0.2, Math.PI - 0.2);
-            ctx.strokeStyle = '#212121'; ctx.lineWidth = 1.2; ctx.stroke();
-            ctx.beginPath(); ctx.fillStyle = config.color;
-            for(let i=0; i<5; i++){
-                const step = (r * 2) / 5; const tx = -r + (i * step) + step/2;
-                ctx.arc(tx, r*0.8, step/2, 0, Math.PI);
-            }
-            ctx.fill(); ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 1; ctx.stroke(); ctx.restore();
-        });
-        
+        // 在前一個與目前物理位置之間插值，減少物理更新與螢幕刷新不同步時的跳動。
+        const alpha = physicsAlpha;
+        for (let i = 0; i < bodies.length; i++) {
+            const body = bodies[i];
+            if (!body.label || !body.label.startsWith('jelly_')) continue;
+
+            const sprite = jellySprites[body.level];
+            if (!sprite) continue;
+
+            const prev = body.positionPrev || body.position;
+            const x = body.isStatic ? body.position.x : prev.x + (body.position.x - prev.x) * alpha;
+            const y = body.isStatic ? body.position.y : prev.y + (body.position.y - prev.y) * alpha;
+            const anglePrev = Number.isFinite(body.anglePrev) ? body.anglePrev : body.angle;
+            const angleDiff = body.angle - anglePrev;
+            const angle = body.isStatic ? body.angle : anglePrev + angleDiff * alpha;
+
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(angle);
+            ctx.drawImage(sprite.canvas, -sprite.offset, -sprite.offset);
+            ctx.restore();
+        }
+
         ctx.save();
-        ctx.beginPath(); 
-        ctx.setLineDash([15, 10]); 
+        ctx.beginPath();
+        ctx.setLineDash([15, 10]);
         ctx.moveTo(0, DEADLINE_Y);
-        ctx.lineTo(render.options.width, DEADLINE_Y); 
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)'; 
+        ctx.lineTo(render.options.width, DEADLINE_Y);
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
         ctx.lineWidth = 4;
-        ctx.stroke(); 
+        ctx.stroke();
         ctx.restore();
     });
 }
+
 init();
 const soundToggle = document.getElementById('sound-toggle');
 
