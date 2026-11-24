@@ -182,6 +182,7 @@ let wallBodies = [];
 let skipSaveOnUnload = false;
 let score = 0, isGameOver = false, isTouching = false;
 const topZoneTimers = new WeakMap();
+const dropGraceUntil = new WeakMap(); // 新放下的水母先給物理引擎時間落下，避免出生位置被誤判為滿出。
 let highscore = parseInt(localStorage.getItem("jellyHighscore")) || 0;
 
 // 儲存目前遊戲進度用的 key。
@@ -516,6 +517,8 @@ function setupEvents() {
             const released = currentJelly;
             currentJelly = null;
             Body.setStatic(released, false);
+            dropGraceUntil.set(released, performance.now() + 2200);
+            topZoneTimers.delete(released);
             if (soundEnabled) playGameSfx(dropSound);
             scheduleGameSave();
         }
@@ -530,6 +533,8 @@ function setupEvents() {
             const released = currentJelly;
             currentJelly = null;
             Body.setStatic(released, false);
+            dropGraceUntil.set(released, performance.now() + 2200);
+            topZoneTimers.delete(released);
             Body.setVelocity(released, { x: 0, y: 0 });
             Body.setAngularVelocity(released, 0);
             scheduleGameSave();
@@ -580,6 +585,15 @@ function setupEvents() {
         const now = performance.now();
         engine.world.bodies.forEach(body => {
             if (!body.label || !body.label.startsWith('jelly_') || body.isStatic) return;
+            // 剛放下的水母仍在出生區域時，不參與滿出判定。
+            // 否則它可能在出生點短暫停留時，被誤認為已經堆到警戒線。
+            const graceUntil = dropGraceUntil.get(body);
+            if (graceUntil && now < graceUntil) {
+                topZoneTimers.delete(body);
+                return;
+            }
+            if (graceUntil) dropGraceUntil.delete(body);
+
             const speed = Math.hypot(body.velocity.x, body.velocity.y);
             const isAboveLine = body.position.y < DEADLINE_Y;
             const isSettled = speed < 0.12 && Math.abs(body.angularVelocity) < 0.025;
