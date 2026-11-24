@@ -190,6 +190,8 @@ let lastPhysicsFrame = 0;
 let physicsAlpha = 1;
 let physicsFrameId = 0;
 const jellySprites = [];
+// 保留裝置原生像素密度，避免為了效能降低畫布解析度而模糊。
+const GAME_PIXEL_RATIO = Math.max(1, window.devicePixelRatio || 1);
 let score = 0, isGameOver = false, isTouching = false;
 const topZoneTimers = new WeakMap();
 const dropGraceUntil = new WeakMap();
@@ -227,15 +229,17 @@ function playGameSfx(audio) {
 
 // 將各階水母預先畫成小圖，遊戲進行時只需 drawImage，
 // 避免每一幀、每一顆水母都重新建立大量 Canvas 路徑。
-function buildJellySprites() {
+function buildJellySprites(pixelRatio = GAME_PIXEL_RATIO) {
     jellyConfigs.forEach((config, level) => {
         const r = config.r;
         const pad = 3;
         const size = Math.ceil(r * 2 + pad * 2);
         const sprite = document.createElement('canvas');
-        sprite.width = size;
-        sprite.height = size;
+        // Sprite 也以裝置原生解析度繪製，避免高 DPI 手機放大時變糊。
+        sprite.width = Math.ceil(size * pixelRatio);
+        sprite.height = Math.ceil(size * pixelRatio);
         const ctx = sprite.getContext('2d');
+        ctx.scale(pixelRatio, pixelRatio);
         const cx = size / 2;
         const cy = size / 2;
 
@@ -308,6 +312,16 @@ function startPhysicsLoop() {
 
         let steps = 0;
         while (physicsAccumulator >= PHYSICS_STEP && steps < MAX_PHYSICS_STEPS) {
+            // 在每次物理更新前記錄上一個已完成的模擬狀態。
+            // 不使用 Matter.Body.positionPrev：它是 Verlet 積分內部資料，
+            // 並不等同於畫面上一幀的座標。
+            const bodies = engine.world.bodies;
+            for (let i = 0; i < bodies.length; i++) {
+                const body = bodies[i];
+                body._jellyRenderPrevX = body.position.x;
+                body._jellyRenderPrevY = body.position.y;
+                body._jellyRenderPrevAngle = body.angle;
+            }
             Engine.update(engine, PHYSICS_STEP);
             physicsAccumulator -= PHYSICS_STEP;
             steps++;
@@ -326,13 +340,13 @@ function init() {
     // 不啟用 sleeping：避免水母在出生區或低速碰撞時提早休眠。
     // 使用 Matter.js 預設 solver iterations，避免降低碰撞穩定度。
     engine = Engine.create();
-    buildJellySprites();
+    buildJellySprites(GAME_PIXEL_RATIO);
     const savedViewport = getSavedViewport();
     const cw = savedViewport ? savedViewport.width : Math.max(1, container.clientWidth);
     const ch = savedViewport ? savedViewport.height : Math.max(1, container.clientHeight);
     render = Render.create({
         element: container, engine: engine,
-        options: { width: cw, height: ch, wireframes: false, background: 'transparent', pixelRatio: Math.min(window.devicePixelRatio || 1, 1.25) }
+        options: { width: cw, height: ch, wireframes: false, background: 'transparent', pixelRatio: GAME_PIXEL_RATIO }
     });
     rebuildWalls(cw, ch);
     Render.run(render);
@@ -757,7 +771,7 @@ function drawLoop() {
             ctx.restore();
         }
 
-        // 在前一個與目前物理位置之間插值，減少物理更新與螢幕刷新不同步時的跳動。
+        // 使用獨立記錄的前一個物理狀態與目前狀態插值，減少畫面跳格。
         const alpha = physicsAlpha;
         for (let i = 0; i < bodies.length; i++) {
             const body = bodies[i];
@@ -766,17 +780,20 @@ function drawLoop() {
             const sprite = jellySprites[body.level];
             if (!sprite) continue;
 
-            const prev = body.positionPrev || body.position;
-            const x = body.isStatic ? body.position.x : prev.x + (body.position.x - prev.x) * alpha;
-            const y = body.isStatic ? body.position.y : prev.y + (body.position.y - prev.y) * alpha;
-            const anglePrev = Number.isFinite(body.anglePrev) ? body.anglePrev : body.angle;
-            const angleDiff = body.angle - anglePrev;
-            const angle = body.isStatic ? body.angle : anglePrev + angleDiff * alpha;
+            const prevX = Number.isFinite(body._jellyRenderPrevX) ? body._jellyRenderPrevX : body.position.x;
+            const prevY = Number.isFinite(body._jellyRenderPrevY) ? body._jellyRenderPrevY : body.position.y;
+            const prevAngle = Number.isFinite(body._jellyRenderPrevAngle) ? body._jellyRenderPrevAngle : body.angle;
+            const x = body.isStatic ? body.position.x : prevX + (body.position.x - prevX) * alpha;
+            const y = body.isStatic ? body.position.y : prevY + (body.position.y - prevY) * alpha;
+            let angleDiff = body.angle - prevAngle;
+            if (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+            if (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+            const angle = body.isStatic ? body.angle : prevAngle + angleDiff * alpha;
 
             ctx.save();
             ctx.translate(x, y);
             ctx.rotate(angle);
-            ctx.drawImage(sprite.canvas, -sprite.offset, -sprite.offset);
+            ctx.drawImage(sprite.canvas, -sprite.offset, -sprite.offset, sprite.size, sprite.size);
             ctx.restore();
         }
 
